@@ -7,7 +7,8 @@ class Html2txt(object):
     def __init__(self):
         pass
 
-    def extract_text(self):
+    @staticmethod
+    def extract_text():
         lectures = Lecture.select().where(Lecture.content != '', Lecture.path == "")
         for lecture in list(lectures):
             soup = BeautifulSoup(lecture.content)

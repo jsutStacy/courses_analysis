@@ -8,8 +8,9 @@ class Pptx2Txt(object):
     def __init__(self, prefix):
         self.prefix = prefix
 
-    def __convert(self, ifile, ofile=None):
-        retval = ''
+    @staticmethod
+    def __convert(ifile):
+        ret_val = ''
         try:
             prs = Presentation(ifile)
 
@@ -25,11 +26,11 @@ class Pptx2Txt(object):
                         for run in paragraph.runs:
                             text_runs.append(run.text)
 
-            retval = ' '.join(text_runs)
+            ret_val = ' '.join(text_runs)
 
         except exc.PythonPptxError as e:
             print "Could not extract text {0}".format(e)
-        return retval
+        return ret_val
 
     def extract_text(self):
         lectures = Lecture.select().where(Lecture.content == '', Lecture.url % "*pptx")

@@ -65,7 +65,6 @@ def lda_for_course_material(course, n_top_words, n_top_topic):
         top_topics = np.argsort(doc_topic[i])[:-n_top_topic - 1:-1]
         topic_probs = doc_topic[i][top_topics]
 
-
         #Substitude this
         title = remove_accents(lectures[i].path.split("/")[-1])
 

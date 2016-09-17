@@ -5,6 +5,7 @@ from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from db.DataModel import Lecture, db
 from pdfminer.pdftypes import PDFException
+from pdfminer.pdfparser import PDFSyntaxError
 import peewee
 import os.path
 
@@ -34,14 +35,16 @@ class Pdf2Txt(object):
                                imagewriter=self.imagewriter)
 
         interpreter = PDFPageInterpreter(rsrcmgr, device)
+
         try:
             for page in PDFPage.get_pages(fp, self.pagenos,
-                                          maxpages=self.maxpages, password=self.password,
-                                          caching=self.caching, check_extractable=True):
+                  maxpages=self.maxpages, password=self.password,
+                  caching=self.caching, check_extractable=True):
                 page.rotate = (page.rotate + self.rotation) % 360
                 interpreter.process_page(page)
-        except (PDFException, MemoryError) as e:
+        except (PDFException, MemoryError, PDFSyntaxError, ValueError) as e:
             print "Could not extract text {0}".format(e)
+
         fp.close()
         device.close()
         retval = None

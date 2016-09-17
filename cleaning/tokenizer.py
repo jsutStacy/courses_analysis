@@ -5,8 +5,7 @@ from db.DataModel import db, Course, Lecture, LectureWord, CourseWord, CorpusWor
 import operator
 import peewee
 from StopWord import StopWord
-import lemmagen.lemmatizer
-from lemmagen.lemmatizer import Lemmatizer
+from pyvabamorf import analyze
 from langdetect import detect
 
 
@@ -15,11 +14,11 @@ class Tokenizer(object):
         self.debug = False
         self.stemmer = PorterStemmer()
         self.lemmatizer = WordNetLemmatizer()
-        self.estLemmatizer = Lemmatizer(dictionary=lemmagen.DICTIONARY_ESTONIAN)
         self.lemmatize = lemmatize
-        self.stopwords = self.get_stopwords()
+        self.stopwords = self.__get_stopwords()
 
-    def get_stopwords(self):
+    @staticmethod
+    def __get_stopwords():
         sw = StopWord()
         return set(sw.words)
 
@@ -29,7 +28,7 @@ class Tokenizer(object):
         else:
             return self.stemmer.stem(token)
 
-    def extractTokens(self, text):
+    def extract_tokens(self, text):
         try:
             tokens = word_tokenize(text)
         except UnicodeEncodeError:
@@ -38,7 +37,7 @@ class Tokenizer(object):
         if not tokens:
             return {}
 
-        est_text = self.is_estonian(text)
+        est_text = self.__is_estonian(text)
 
         token_dict = {}
         for token in tokens:
@@ -50,7 +49,7 @@ class Tokenizer(object):
 
             try:
                 if est_text:
-                    lemstem_word = self.estLemmatizer.lemmatize(token)
+                    lemstem_word = analyze(token)[0]['analysis'][0]['lemma']
                 else:
                     lemstem_word = self.lemstem(token)
             except Exception:
@@ -59,14 +58,15 @@ class Tokenizer(object):
             if lemstem_word not in self.stopwords:
                 if self.debug:
                     print "{0}: {1}".format(token.encode('utf-8'), lemstem_word.encode('utf-8'))
-                if token_dict.has_key(lemstem_word):
+                if lemstem_word in token_dict:
                     token_dict[lemstem_word] += 1
                 else:
                     token_dict[lemstem_word] = 1
 
         return token_dict
 
-    def is_estonian(self, text):
+    @staticmethod
+    def __is_estonian(text):
         est = False
         try:
             est = detect(text) == 'et'
@@ -74,19 +74,20 @@ class Tokenizer(object):
             pass
         return est
 
-    def getLectureRecord(self, lectureId):
+    @staticmethod
+    def __get_lecture_record(lecture_id):
         try:
-            data = Lecture.select().where(Lecture.id == lectureId).get()
+            data = Lecture.select().where(Lecture.id == lecture_id).get()
             return data
         except Exception:
             return None
 
-    def extractLectureTokens(self, lecture):
+    def extract_lecture_tokens(self, lecture):
         if lecture is None:
             return False
 
         text = lecture.content
-        tokens = self.extractTokens(text)
+        tokens = self.extract_tokens(text)
         sorted_tokens = sorted(tokens.items(), key=operator.itemgetter(1))
 
         for token in sorted_tokens:
@@ -108,55 +109,59 @@ class Tokenizer(object):
 
         return True
 
-    def getCourseRecord(self, courseId):
+    @staticmethod
+    def __get_course_record(course_id):
         try:
-            data = Course.select().where(Course.id == courseId).get()
+            data = Course.select().where(Course.id == course_id).get()
             return data
         except Exception:
             return None
 
-    def getLectures(self, course):
+    @staticmethod
+    def __get_lectures(course):
         lectures = Lecture.select().where(Lecture.course == course)
         return list(lectures)
 
-    def extractCourseTokens(self, lectures):
+    def extract_course_tokens(self, lectures):
         print "Lecture count: {0}".format(len(lectures))
         for lecture in lectures:
             print "Lecture: {0}".format(lecture.id)
-            self.extractLectureTokens(lecture)
+            self.extract_lecture_tokens(lecture)
 
-    def getCourses(self, courseId=0):
-        if courseId:
-            courses = Course.select().where(Course.id == courseId)
+    @staticmethod
+    def __get_courses(course_id=0):
+        if course_id:
+            courses = Course.select().where(Course.id == course_id)
         else:
             courses = Course.select()
         return list(courses)
 
-    def extractAllCourseTokens(self):
-        for course in self.getCourses():
+    def extract_all_course_tokens(self):
+        for course in self.__get_courses():
             print course.id, course.name
-            lectures = self.getLectures(course)
-            self.extractCourseTokens(lectures)
+            lectures = self.__get_lectures(course)
+            self.extract_course_tokens(lectures)
 
-    def getLectureWords(self, lecture):
-        lectureWords = list(LectureWord.select().where(LectureWord.lecture == lecture))
-        return lectureWords
+    @staticmethod
+    def __get_lecture_words(lecture):
+        lecture_words = list(LectureWord.select().where(LectureWord.lecture == lecture))
+        return lecture_words
 
-    def createCourseTokens(self):
-        for course in self.getCourses():
+    def create_course_tokens(self):
+        for course in self.__get_courses():
             print "{}: {}".format(course.id, course.name.encode('utf8'))
             token_dict = {}
             lecture_token = {}
 
-            for lecture in self.getLectures(course):
-                lectureWords = self.getLectureWords(lecture)
-                for lectureWord in lectureWords:
-                    if not token_dict.has_key(lectureWord.word):
-                        token_dict[lectureWord.word] = 0
-                        lecture_token[lectureWord.word] = 0
+            for lecture in self.__get_lectures(course):
+                lecture_words = self.__get_lecture_words(lecture)
+                for lecture_word in lecture_words:
+                    if not lecture_word.word in token_dict:
+                        token_dict[lecture_word.word] = 0
+                        lecture_token[lecture_word.word] = 0
 
-                    token_dict[lectureWord.word] += lectureWord.count
-                    lecture_token[lectureWord.word] += 1
+                    token_dict[lecture_word.word] += lecture_word.count
+                    lecture_token[lecture_word.word] += 1
             sorted_tokens = sorted(token_dict.items(), key=operator.itemgetter(1))
             for token in sorted_tokens:
                 try:
@@ -172,18 +177,18 @@ class Tokenizer(object):
                 except peewee.OperationalError as e:
                     print "Could not create a record for course {0}, word {1}, {2}".format(course.name.encode('utf8'),
                                                                                            token[0].encode('utf8'), e)
-
-    def getCourseWords(self, courseId=0):
-        if courseId == 0:
-            courseWords = CourseWord.select()
+    @staticmethod
+    def __get_course_words(course_id=0):
+        if course_id == 0:
+            course_words = CourseWord.select()
         else:
-            courseWords = CourseWord.select().where(CourseWord.course == courseId)
-        return list(courseWords)
+            course_words = CourseWord.select().where(CourseWord.course == course_id)
+        return list(course_words)
 
-    def createCorpusTokens(self):
+    def create_corpus_tokens(self):
         token_dict = {}
-        for courseWord in self.getCourseWords():
-            if token_dict.has_key(courseWord.word):
+        for courseWord in self.__get_course_words():
+            if courseWord.word in token_dict:
                 token_dict[courseWord.word] += courseWord.count
             else:
                 token_dict[courseWord.word] = courseWord.count
@@ -203,17 +208,17 @@ class Tokenizer(object):
                 print "Could not create a record for word {}, {}".format(token[0], e)
 
     def calc_tf(self):
-        for course in self.getCourses(55):
+        for course in self.__get_courses(55):
             print course.name
-            for lecture in self.getLectures(course):
-                maxCount = 0
-                for lectureWord in self.getLectureWords(lecture):
-                    maxCount = max(maxCount, lectureWord.count)
+            for lecture in self.__get_lectures(course):
+                max_count = 0
+                for lectureWord in self.__get_lecture_words(lecture):
+                    max_count = max(max_count, lectureWord.count)
 
-                for lectureWord in self.getLectureWords(lecture):
+                for lectureWord in self.__get_lecture_words(lecture):
                     try:
                         with db.transaction():
-                            lectureWord.weight = 0.5 + (0.5 * lectureWord.count) / maxCount
+                            lectureWord.weight = 0.5 + (0.5 * lectureWord.count) / max_count
                             lectureWord.save()
                     except peewee.OperationalError as e:
                         print e
@@ -228,12 +233,12 @@ if __name__ == '__main__':
     #download('punkt')
 
     print "Extracting all tokens"
-    tok.extractAllCourseTokens()
+    tok.extract_all_course_tokens()
 
     print "Creating course tokens"
-    tok.createCourseTokens()
+    tok.create_course_tokens()
 
     # print "Calculating tf weights"
     # tok.calc_tf()
 
-    tok.createCorpusTokens()
+    tok.create_corpus_tokens()
