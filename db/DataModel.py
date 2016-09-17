@@ -1,8 +1,9 @@
-import peewee, os
+import peewee
+import os
 
-DB_DIR = os.path.dirname(os.path.dirname(__file__)) + "/db/"
-dbname = DB_DIR + 'courses.sqlite'
-db = peewee.SqliteDatabase(dbname)
+DB_DIR = os.path.dirname(os.path.abspath(__file__))
+db_name = DB_DIR + '\\courses.sqlite'
+db = peewee.SqliteDatabase(db_name)
 
 
 class BaseModel(peewee.Model):
@@ -80,5 +81,6 @@ class LectureTopicWord(BaseModel):
 
 
 if __name__ == '__main__':
+    print db_name
     db.create_tables([Course, Lecture, CourseWord, LectureWord, CorpusWord, TopicWord, CourseTopic, LDALogLikelihood,
                       LectureTopic, LectureTopicWord], safe=True)
