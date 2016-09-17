@@ -37,9 +37,10 @@ class Pdf2Txt(object):
         interpreter = PDFPageInterpreter(rsrcmgr, device)
 
         try:
-            for page in PDFPage.get_pages(fp, self.pagenos,
-                  maxpages=self.maxpages, password=self.password,
-                  caching=self.caching, check_extractable=True):
+            for page in PDFPage.get_pages(
+                    fp, self.pagenos,
+                    maxpages=self.maxpages, password=self.password,
+                    caching=self.caching, check_extractable=True):
                 page.rotate = (page.rotate + self.rotation) % 360
                 interpreter.process_page(page)
         except (PDFException, MemoryError, PDFSyntaxError, ValueError) as e:

@@ -177,6 +177,7 @@ class Tokenizer(object):
                 except peewee.OperationalError as e:
                     print "Could not create a record for course {0}, word {1}, {2}".format(course.name.encode('utf8'),
                                                                                            token[0].encode('utf8'), e)
+
     @staticmethod
     def __get_course_words(course_id=0):
         if course_id == 0:

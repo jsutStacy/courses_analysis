@@ -81,6 +81,5 @@ class LectureTopicWord(BaseModel):
 
 
 if __name__ == '__main__':
-    print db_name
     db.create_tables([Course, Lecture, CourseWord, LectureWord, CorpusWord, TopicWord, CourseTopic, LDALogLikelihood,
                       LectureTopic, LectureTopicWord], safe=True)

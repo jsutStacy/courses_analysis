@@ -1,3 +1,5 @@
+"""Script for removing stopwords from all the 'word'-related DB tables"""
+
 from StopWord import StopWord
 import peewee
 from db.DataModel import db, CourseWord, LectureWord, CorpusWord

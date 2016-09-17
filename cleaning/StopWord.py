@@ -1,5 +1,4 @@
 import json
-from Teacher import Teacher
 
 
 class StopWord(object):
@@ -7,17 +6,29 @@ class StopWord(object):
         self.words = self.assemble()
 
     def assemble(self):
-        teacher = Teacher()
-        words = set(self.load_stopwords('en'))
-        words = words.union(set(self.load_stopwords('et')))
-        words = words.union(set(teacher.names))
+        words = set(self.__load_stopwords('en'))
+        words = words.union(set(self.__load_stopwords('et')))
+        words = words.union(set(self.__get_teacher_names))
         words = sorted(list(words))
         return words
 
-    def load_stopwords(self, language):
+    @staticmethod
+    def __load_stopwords(language):
         fname = 'stopwords_' + language + '.json'
         words = json.loads(open(fname).read())
         return words
+
+    @staticmethod
+    def __get_teacher_names():
+        data = open('teachers.json').read()
+        teachers = json.loads(data)
+
+        names = []
+        for teacher in teachers:
+            for name in teacher['name'].split():
+                names.append(name.lower())
+
+        return names
 
 
 if __name__ == '__main__':
