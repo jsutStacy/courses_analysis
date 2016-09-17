@@ -8,7 +8,7 @@ class StopWord(object):
     def assemble(self):
         words = set(self.__load_stopwords('en'))
         words = words.union(set(self.__load_stopwords('et')))
-        words = words.union(set(self.__get_teacher_names))
+        words = words.union(set(self.__get_teacher_names()))
         words = sorted(list(words))
         return words
 
