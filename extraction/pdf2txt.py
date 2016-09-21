@@ -59,11 +59,12 @@ class Pdf2Txt(object):
         lectures = Lecture.select().where(Lecture.content == '', Lecture.url % "*pdf")
 
         for lecture in list(lectures):
-            if not os.path.exists(self.prefix+lecture.path):
-                print "File not found: {0}".format(lecture.path)
+            path = self.prefix + lecture.path
+            if not os.path.exists(path):
+                print "File not found: {0}".format(path)
                 continue
             print lecture.url
-            lecture.content = self.__convert(self.prefix+lecture.path)
+            lecture.content = self.__convert(path)
             try:
                 with db.transaction():
                     lecture.save()

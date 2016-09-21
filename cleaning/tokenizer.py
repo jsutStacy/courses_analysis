@@ -196,7 +196,7 @@ class Tokenizer(object):
 
         sorted_tokens = sorted(token_dict.items(), key=operator.itemgetter(1))
         for token in sorted_tokens:
-            print token
+           # print token
             try:
                 with db.transaction() as txn:
                     CorpusWord.create(

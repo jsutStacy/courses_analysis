@@ -1,8 +1,10 @@
 import json
+import os.path
 
 
 class StopWord(object):
     def __init__(self):
+        self.prefix = os.path.dirname(os.path.abspath(__file__))
         self.words = self.assemble()
 
     def assemble(self):
@@ -12,15 +14,13 @@ class StopWord(object):
         words = sorted(list(words))
         return words
 
-    @staticmethod
-    def __load_stopwords(language):
-        fname = 'stopwords_' + language + '.json'
-        words = json.loads(open(fname).read())
+    def __load_stopwords(self, language):
+        filename = self.prefix + '\\stopwords_' + language + '.json'
+        words = json.loads(open(filename).read())
         return words
 
-    @staticmethod
-    def __get_teacher_names():
-        data = open('teachers.json').read()
+    def __get_teacher_names(self):
+        data = open(self.prefix + '\\teachers.json').read()
         teachers = json.loads(data)
 
         names = []
