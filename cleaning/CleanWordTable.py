@@ -6,8 +6,7 @@ from db.DataModel import db, CourseWord, LectureWord, CorpusWord
 
 
 def main():
-    sw = StopWord()
-    stopwords = set(sw.words)
+    stopwords = StopWord().words
 
     clean_words_table(CourseWord, stopwords)
     clean_words_table(LectureWord, stopwords)

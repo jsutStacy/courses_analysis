@@ -11,7 +11,6 @@ class StopWord(object):
         words = set(self.__load_stopwords('en'))
         words = words.union(set(self.__load_stopwords('et')))
         words = words.union(set(self.__get_teacher_names()))
-        words = sorted(list(words))
         return words
 
     def __load_stopwords(self, language):
