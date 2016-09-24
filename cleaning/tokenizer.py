@@ -16,12 +16,11 @@ class Tokenizer(object):
 
         thread_count = 7
         if len(sys.argv) == 2:
-            thread_count = int(sys.argv[0])
+            thread_count = int(sys.argv[1])
         self.pool = mp.ThreadingPool(thread_count)
 
     def __extract_lecture_tokens(self, lecture):
         print "Course {} Lecture: {}".format(lecture.course.id, lecture.id)
-
         text = lecture.content
         try:
             tokens = word_tokenize(text)
@@ -82,7 +81,7 @@ class Tokenizer(object):
         return list(courses)
 
     def extract_all_lectures_tokens(self):
-        result_lectures = self.pool.map(self.__extract_lecture_tokens, Lecture.select().where(Lecture.id < 50))
+        result_lectures = self.pool.map(self.__extract_lecture_tokens, Lecture.select())
 
         with db.atomic():
             LectureWord.insert_many([x for y in result_lectures for x in y]).execute()

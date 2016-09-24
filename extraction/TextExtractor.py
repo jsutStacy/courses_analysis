@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
     process_count = 7
     if len(sys.argv) == 2:
-        process_count = int(sys.argv[0])
+        process_count = int(sys.argv[1])
 
     print "Extracting text from html..."
     Html2txt(process_count).extract_text()
