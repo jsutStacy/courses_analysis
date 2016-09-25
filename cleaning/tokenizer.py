@@ -1,7 +1,8 @@
 from nltk import WordNetLemmatizer
-from nltk import word_tokenize
+from nltk import sent_tokenize, word_tokenize
 from db.DataModel import db, Course, Lecture, LectureWord, CourseWord, CorpusWord
 from StopWord import StopWord
+from CoOccurrence import CoOccurrence
 from pyvabamorf import analyze
 from langdetect import detect
 import pathos.multiprocessing as mp
@@ -13,6 +14,8 @@ class Tokenizer(object):
         self.debug = False
         self.lemmatizer = WordNetLemmatizer()
         self.stopwords = StopWord().words
+        self.co_occ = CoOccurrence()
+        self.co_occurring_words = []
 
         thread_count = 7
         if len(sys.argv) == 2:
@@ -23,40 +26,46 @@ class Tokenizer(object):
         print "Course {} Lecture: {}".format(lecture.course.id, lecture.id)
         text = lecture.content
         try:
-            tokens = word_tokenize(text)
+            sentences = sent_tokenize(text)  # Split raw text to sentences
         except UnicodeEncodeError:
-            tokens = []
+            sentences = []
 
-        if not tokens:
-            return []
+        if not sentences:
+            return [], {}, []
 
-        est_text = self.__is_estonian(text)
+        est_text = self.__is_estonian(text)  # Different lemmatizer should be applied in case of Estonian text
 
         token_dict = {}
-        for token in tokens:
-            token = token.lower()
+        clean_sentences = []  # Keep track of sentences once they have been cleaned for co-occurrence
+        for sentence in sentences:
+            tokenized_sentence = word_tokenize(sentence)
+            clean_sentence = []
+            for token in tokenized_sentence:
+                token = token.lower()
 
-            # check if string consists of alphabetic characters only
-            if not (token.isalpha() and len(token) > 2):
-                continue
+                # check if string consists of alphabetic characters only
+                if not (token.isalpha() and len(token) > 2):
+                    continue
 
-            try:
-                if est_text:
-                    lem_word = analyze(token)[0]['analysis'][0]['lemma']
-                else:
-                    lem_word = self.lemmatizer.lemmatize(token)
-            except Exception:
-                lem_word = token
+                try:
+                    if est_text:
+                        lem_word = analyze(token)[0]['analysis'][0]['lemma']
+                    else:
+                        lem_word = self.lemmatizer.lemmatize(token)
+                except Exception:
+                    lem_word = token
 
-            if lem_word not in self.stopwords:
-                if self.debug:
-                    print "{}: {}".format(token.encode('utf-8'), lem_word.encode('utf-8'))
-                if lem_word in token_dict:
-                    token_dict[lem_word] += 1
-                else:
-                    token_dict[lem_word] = 1
+                if lem_word not in self.stopwords:
+                    clean_sentence.append(lem_word)
+                    if self.debug:
+                        print "{}: {}".format(token.encode('utf-8'), lem_word.encode('utf-8'))
+                    if lem_word in token_dict:
+                        token_dict[lem_word] += 1
+                    else:
+                        token_dict[lem_word] = 1
+            clean_sentences.append(' '.join(clean_sentence))
 
-        return self.__compose_lecture_rows(lecture, token_dict)
+        return lecture, token_dict, clean_sentences
 
     @staticmethod
     def __is_estonian(text):
@@ -81,17 +90,42 @@ class Tokenizer(object):
         return list(courses)
 
     def extract_all_lectures_tokens(self):
-        result_lectures = self.pool.map(self.__extract_lecture_tokens, Lecture.select())
+        # Tokenize and clean each lecture separately
+        result_data = self.pool.map(self.__extract_lecture_tokens, Lecture.select())
 
+        # Perform co-occurrence over entire word corpus
+        corpus = [x for y in result_data for x in y[2]]  # Flatten results
+        self.co_occurring_words = self.co_occ.find_co_occurring_words(corpus)
+
+        # Re-count co-occurring words and remove 'standalone' words
+        result_data = self.pool.map(self.__adjust_lecture_counts, result_data)
+
+        # Compose data set for mass insert
+        persistent_tokens = self.pool.map(self.__compose_lecture_rows, result_data)
+
+        # One atomic bulk insert for faster performance
         with db.atomic():
-            LectureWord.insert_many([x for y in result_lectures for x in y]).execute()
+            LectureWord.insert_many([x for y in persistent_tokens for x in y]).execute()
+
+    def __adjust_lecture_counts(self, res_data):
+        token_dict = res_data[1]
+        clean_sentences = res_data[2]
+        for word in self.co_occurring_words:
+            for single_word in word.split(' '):
+                if single_word in token_dict:  # Delete words that that make up co-occurring words
+                    del token_dict[single_word]
+            count = sum([x.count(word) for x in clean_sentences])
+            if count > 0:
+                token_dict[word] = count
+
+        return res_data[0], token_dict
 
     @staticmethod
-    def __compose_lecture_rows(lecture, token_dict):
+    def __compose_lecture_rows(lecture_row):
         rows = []
-
+        token_dict = lecture_row[1]
         for token in token_dict:
-            row_dict = {'lecture': lecture,
+            row_dict = {'lecture': lecture_row[0],
                         'word': token,
                         'count': token_dict[token],
                         'active': True,

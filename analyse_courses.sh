@@ -1,7 +1,7 @@
 #!/bin/sh
 SEMESTERS=$1
 
-#export PYTHONPATH=.
+export PYTHONPATH=.
 
 echo "Cleaning previous data..."
 make clean-analysis

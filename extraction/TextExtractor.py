@@ -17,5 +17,8 @@ if __name__ == '__main__':
     print "Extracting text from pptx files..."
     Pptx2Txt(prefix, process_count).extract_text()
 
+    print "Extracting text from doc files..."
+    #TODO
+
     print "Extracting text from pdf files..."
     Pdf2Txt(prefix, process_count).extract_text()

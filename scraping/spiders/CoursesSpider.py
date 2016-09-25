@@ -15,10 +15,12 @@ class CoursesSpider(scrapy.Spider):
     #Custom params
     filter_url = "https://courses.cs.ut.ee"
     allowed_semesters = []
+    allowed_extensions = ('.pdf', '.pptx', '.doc')
 
-    #Expected format '2016F,2014S' - i.e 2016 fall semester and 2014 spring semester
-    #The 'semesters' parameter is passed via -a argument
     def __init__(self, semesters='', *args, **kwargs):
+        """ Expected format '2016F,2014S' - i.e 2016 fall semester and 2014 spring semester
+            The 'semesters' parameter is passed via -a argument """
+
         super(CoursesSpider, self).__init__(*args, **kwargs)
         self.allowed_semesters = self.__parse_semesters(semesters)
 
@@ -113,6 +115,5 @@ class CoursesSpider(scrapy.Spider):
 
         return list(set(semesters))
 
-    @staticmethod
-    def __is_valid_url(url):
-        return (url.find(".pdf") > -1 or url.find(".pptx") > -1) and url.find("action=upload") == -1
+    def __is_valid_url(self, url):
+        return url.endswith(self.allowed_extensions) and url.find("action=upload") == -1

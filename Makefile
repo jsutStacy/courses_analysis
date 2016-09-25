@@ -21,4 +21,4 @@ tokenize:
 	python cleaning/tokenizer.py
 
 analyse:
-	python analysis/topicmodeling.py
+	python analysis/TopicModeling.py
