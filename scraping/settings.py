@@ -12,7 +12,7 @@ BOT_NAME = 'scraping'
 
 SPIDER_MODULES = ['scraping.spiders']
 NEWSPIDER_MODULE = 'scraping.spiders'
-DOWNLOAD_TIMEOUT = 30
+DOWNLOAD_TIMEOUT = 180
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent

@@ -8,6 +8,7 @@ clean-pyc:
 
 clean-analysis:
 	rm -rf raw_data
+	rm -rf backup
 	rm -f db/courses.sqlite
 	python db/DataModel.py
 

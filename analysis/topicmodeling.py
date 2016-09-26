@@ -19,7 +19,7 @@ def main():
 def lda_over_lectures(n_top_words, n_top_topic):
     courses = Course.select()
     for course in courses:
-        print "LDA for course: {]".format(course.name.encode('utf-8'))
+        print "LDA for course: {}".format(course.name.encode('utf-8'))
         lda_for_course_material(course, n_top_words, n_top_topic)
 
 

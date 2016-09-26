@@ -10,6 +10,7 @@ from items import CoursesItem
 from items import DataItem
 import urllib
 from db.DataModel import Course, Lecture, db
+from spiders.CoursesSpider import CoursesSpider
 import peewee
 
 
@@ -102,7 +103,7 @@ class DataPipeline(object):
     @staticmethod
     def __get_title(url):
         title = url.split("/")
-        if url.find(".pdf") > -1 or url.find(".pptx") > -1:
+        if url.endswith(CoursesSpider.allowed_extensions):
             return title[-1]
         else:
             return "Web content - " + str(title[-1])
