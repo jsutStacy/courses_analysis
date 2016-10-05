@@ -15,7 +15,7 @@ class CoursesSpider(scrapy.Spider):
     #Custom params
     filter_url = "https://courses.cs.ut.ee"
     allowed_semesters = []
-    allowed_extensions = ('.pdf', '.pptx', '.doc')
+    allowed_extensions = ('.6up.pdf', '.pdf', '.pptx', '.docx')
 
     def __init__(self, semesters='', *args, **kwargs):
         """ Expected format '2016F,2014S' - i.e 2016 fall semester and 2014 spring semester
