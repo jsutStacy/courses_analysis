@@ -14,13 +14,14 @@ class Tokenizer(object):
         self.debug = False
         self.lemmatizer = WordNetLemmatizer()
         self.stopwords = StopWord().words
-        self.co_occ = CoOccurrence()
-        self.co_occurring_words = []
 
-        thread_count = 7
+        thread_count = 8
         if len(sys.argv) == 2:
             thread_count = int(sys.argv[1])
         self.pool = mp.ThreadingPool(thread_count)
+
+        self.co_occ = CoOccurrence(pool=self.pool)
+        self.co_occurring_words = []
 
     def __extract_lecture_tokens(self, lecture):
         print "Course {} Lecture: {}".format(lecture.course.id, lecture.id)
@@ -31,7 +32,7 @@ class Tokenizer(object):
             sentences = []
 
         if not sentences:
-            return [], {}, []
+            return None
 
         est_text = self.__is_estonian(text)  # Different lemmatizer should be applied in case of Estonian text
 
@@ -91,11 +92,11 @@ class Tokenizer(object):
 
     def extract_all_lectures_tokens(self):
         # Tokenize and clean each lecture separately
-        result_data = self.pool.map(self.__extract_lecture_tokens, Lecture.select())
+        result_data = [x for x in self.pool.map(self.__extract_lecture_tokens, Lecture.select()) if x]
 
-        # Perform co-occurrence over entire word corpus
-        corpus = [x for y in result_data for x in y[2]]  # Flatten results
-        self.co_occurring_words = self.co_occ.find_co_occurring_words(corpus)
+        # Perform co-occurrence over entire word corpus, filter by course id limit
+        docs = [(y[0].course.id, y[2]) for y in result_data]
+        self.co_occurring_words = self.co_occ.find_co_occurring_words(docs)
 
         # Re-count co-occurring words and remove 'standalone' words
         result_data = self.pool.map(self.__adjust_lecture_counts, result_data)

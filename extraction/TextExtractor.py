@@ -19,7 +19,7 @@ def __remove_duplicates():
     """
     lectures_to_delete = []
 
-    for course in Course.select().where(Course.id == 2):
+    for course in Course.select():
         lectures = {}
         for lecture in Lecture.select().where(Lecture.course == course):
             extension = __resolve_extension(lecture.name)
