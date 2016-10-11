@@ -4,7 +4,7 @@ import numpy as np
 
 class CoOccurrence(object):
 
-    def __init__(self, pool, ngram_range=(2, 3), word_limit = 15, id_limit=2):
+    def __init__(self, pool, ngram_range=(2, 3), word_limit = 20, id_limit=3):
         """
         E.g ngram_range(2,3) specifies that we are only interested in n-grams of size 2 and 3.
 
@@ -34,10 +34,9 @@ class CoOccurrence(object):
         co_occurring_words = [i for i, j in zip(self.count_model.get_feature_names(),
                               np.array(sum_occ)[0].tolist()) if j >= self.limit]
 
-        cleaned_words = self.__clean(co_occurring_words)
-        infrequent_words = self.pool.map(self.__is_infrequent, cleaned_words)
+        infrequent_words = set(self.pool.map(self.__is_infrequent, co_occurring_words))
 
-        return [x for x in cleaned_words if x not in infrequent_words]
+        return self.__clean([x for x in co_occurring_words if x not in infrequent_words])
 
     def __is_infrequent(self, word):
         """
@@ -45,7 +44,7 @@ class CoOccurrence(object):
         :param word:
         :return: provided word if it is infrequent, None otherwise
         """
-        ids = set([unique_id for unique_id, lecture in self.docs if word in lecture])
+        ids = set([idf for idf, lecture in self.docs for sentence in lecture if word in sentence])
         return word if len(ids) < self.id_limit else None
 
     def __clean(self, words):

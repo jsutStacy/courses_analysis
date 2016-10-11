@@ -2,6 +2,7 @@ from nltk import WordNetLemmatizer
 from nltk import sent_tokenize, word_tokenize
 from db.DataModel import db, Course, Lecture, LectureWord, CourseWord, CorpusWord
 from StopWord import StopWord
+from CleanWordTables import Cleaner
 from CoOccurrence import CoOccurrence
 from pyvabamorf import analyze
 from langdetect import detect
@@ -13,7 +14,7 @@ class Tokenizer(object):
     def __init__(self):
         self.debug = False
         self.lemmatizer = WordNetLemmatizer()
-        self.stopwords = StopWord().words
+        self.sw = StopWord()
 
         thread_count = 8
         if len(sys.argv) == 2:
@@ -44,8 +45,8 @@ class Tokenizer(object):
             for token in tokenized_sentence:
                 token = token.lower()
 
-                # check if string consists of alphabetic characters only
-                if not (token.isalpha() and len(token) > 2):
+                # check if string consists of alphabetic characters only, don't include teacher names
+                if (not (token.isalpha() and len(token) > 2)) or any([token in w for w in self.sw.teachers]):
                     continue
 
                 try:
@@ -56,7 +57,7 @@ class Tokenizer(object):
                 except Exception:
                     lem_word = token
 
-                if lem_word not in self.stopwords:
+                if lem_word not in self.sw.words:
                     clean_sentence.append(lem_word)
                     if self.debug:
                         print "{}: {}".format(token.encode('utf-8'), lem_word.encode('utf-8'))
@@ -97,7 +98,7 @@ class Tokenizer(object):
         # Perform co-occurrence over entire word corpus, filter by course id limit
         docs = [(y[0].course.id, y[2]) for y in result_data]
         self.co_occurring_words = self.co_occ.find_co_occurring_words(docs)
-
+        print self.co_occurring_words
         # Re-count co-occurring words and remove 'standalone' words
         result_data = self.pool.map(self.__adjust_lecture_counts, result_data)
 
@@ -185,10 +186,16 @@ class Tokenizer(object):
             else:
                 token_dict[course_word.word] = course_word.count
 
+        infrequent_words = [k for k, v in token_dict if v < 3]
+        for k in infrequent_words:
+            del token_dict[k]
+
         result_corpus = self.pool.map(self.__compose_corpus_rows, token_dict.items())
 
         with db.atomic():
             CorpusWord.insert_many(result_corpus).execute()
+
+        return infrequent_words
 
     @staticmethod
     def __compose_corpus_rows(token):
@@ -211,4 +218,8 @@ if __name__ == '__main__':
     tok.create_all_course_tokens()
 
     print "Creating corpus tokens"
-    tok.create_corpus_tokens()
+    infrequent_words = tok.create_corpus_tokens()
+
+    # Remove infrequent words from other word tables
+    cleaner = Cleaner()
+    cleaner.clean_infrequent_words(infrequent_words)

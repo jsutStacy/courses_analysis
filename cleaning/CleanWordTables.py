@@ -2,30 +2,35 @@
 
 from StopWord import StopWord
 from db.DataModel import db, CourseWord, LectureWord, CorpusWord
-import sys
 import peewee
 
 
 class Cleaner(object):
-    def __init__(self, mode=2):
-        self.remove_words = set(StopWord().words)
-        if mode > 1:
-            self.remove_words = self.remove_words.union(self.__get_infrequent_words())
 
-    def clean(self):
-        self.clean_words_table(CourseWord)
-        self.clean_words_table(LectureWord)
-        self.clean_words_table(CorpusWord)
+    def clean_infrequent_words(self, infrequent_words=None):
+        if not infrequent_words:
+            infrequent_words = self.__get_infrequent_words()
+            self.__clean_words_table(CorpusWord, infrequent_words)
+
+        self.__clean_words_table(CourseWord, infrequent_words)
+        self.__clean_words_table(LectureWord, infrequent_words)
+
+    def clean_stopwords(self):
+        stop_words = set(StopWord().words)
+        self.__clean_words_table(CourseWord, stop_words)
+        self.__clean_words_table(LectureWord, stop_words)
+        self.__clean_words_table(CorpusWord, stop_words)
 
     @staticmethod
     def __get_infrequent_words():
-        corpus_words = CorpusWord.select().where(CorpusWord.count < 3)
+        corpus_words = CorpusWord.select().where(CorpusWord.count < 2)
         return [corpus.word for corpus in corpus_words]
 
-    def clean_words_table(self, table):
+    @staticmethod
+    def __clean_words_table(table, removable_words):
         print "Cleaning table {}".format(table.__name__)
 
-        current_records = [record for record in table.select() if record.word in self.remove_words]
+        current_records = [record for record in table.select() if record.word in removable_words]
 
         try:
             with db.transaction():
@@ -36,9 +41,6 @@ class Cleaner(object):
 
 
 if __name__ == '__main__':
-    arg = 2
-    if len(sys.argv) == 2 and len(sys.argv[1]) == 1:
-        arg = int(sys.argv[1])
-
-    tok = Cleaner(arg)
-    tok.clean()
+    tok = Cleaner()
+    tok.clean_stopwords()
+    tok.clean_infrequent_words()

@@ -6,11 +6,11 @@ class StopWord(object):
     def __init__(self):
         self.prefix = os.path.dirname(os.path.abspath(__file__))
         self.words = self.assemble()
+        self.teachers = set(self.__get_teacher_names())
 
     def assemble(self):
         words = set(self.__load_stopwords('en'))
         words = words.union(set(self.__load_stopwords('et')))
-        words = words.union(set(self.__get_teacher_names()))
         return words
 
     def __load_stopwords(self, language):
