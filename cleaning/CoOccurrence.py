@@ -4,7 +4,7 @@ import numpy as np
 
 class CoOccurrence(object):
 
-    def __init__(self, pool, ngram_range=(2, 3), word_limit = 20, id_limit=3):
+    def __init__(self, ngram_range=(2, 3), word_limit = 20, id_limit=3):
         """
         E.g ngram_range(2,3) specifies that we are only interested in n-grams of size 2 and 3.
 
@@ -14,38 +14,34 @@ class CoOccurrence(object):
         id_limit specifies the minimum amount of unique group ids(e.g course id, lecture id)
         a co-occurring word should appear in.
         """
-        self.count_model = CountVectorizer(ngram_range=ngram_range)
+        self.count_model = CountVectorizer(stop_words=[''], lowercase=False,
+                                           tokenizer=lambda text: text.split(' '), ngram_range=ngram_range)
         self.limit = word_limit
         self.id_limit = id_limit
-        self.pool = pool
-        self.docs = []
 
     def find_co_occurring_words(self, docs):
         """
         :param docs: list of pairs with the first value being a unique id, second lecture sentences
         :return: a filtered list of n-grams
         """
-        self.docs = docs
 
-        corpus = [x for y in self.docs for x in y[1]]  # Flatten results
-        co_occurrences = self.count_model.fit_transform(corpus)
-        sum_occ = co_occurrences.sum(axis=0)
+        all_co_occurrences = {}
+        for doc in docs:
+            if len(doc[1]) == 1 and doc[1][0].count(' ') < 2:
+                continue
 
-        co_occurring_words = [i for i, j in zip(self.count_model.get_feature_names(),
-                              np.array(sum_occ)[0].tolist()) if j >= self.limit]
+            co_occurrences = self.count_model.fit_transform(doc[1])
+            sum_occ = co_occurrences.sum(axis=0)
+            for i, j in zip(self.count_model.get_feature_names(), np.array(sum_occ)[0].tolist()):
+                if i in all_co_occurrences:
+                    all_co_occurrences[i][0] += j
+                    all_co_occurrences[i][1].add(doc[0])
+                else:
+                    idx = [doc[0]]
+                    all_co_occurrences[i] = [j, set(idx)]
 
-        infrequent_words = set(self.pool.map(self.__is_infrequent, co_occurring_words))
-
-        return self.__clean([x for x in co_occurring_words if x not in infrequent_words])
-
-    def __is_infrequent(self, word):
-        """
-        Filter co-occurring words by identifier(e.g course id) limit
-        :param word:
-        :return: provided word if it is infrequent, None otherwise
-        """
-        ids = set([idf for idf, lecture in self.docs for sentence in lecture if word in sentence])
-        return word if len(ids) < self.id_limit else None
+        return self.__clean([k for k, v in all_co_occurrences.items() if v[0] >= self.limit
+                             and len(v[1]) >= self.id_limit])
 
     def __clean(self, words):
         """

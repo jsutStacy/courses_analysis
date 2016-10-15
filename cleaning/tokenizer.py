@@ -6,8 +6,6 @@ from CleanWordTables import Cleaner
 from CoOccurrence import CoOccurrence
 from pyvabamorf import analyze
 from langdetect import detect
-import pathos.multiprocessing as mp
-import sys
 
 
 class Tokenizer(object):
@@ -15,13 +13,7 @@ class Tokenizer(object):
         self.debug = False
         self.lemmatizer = WordNetLemmatizer()
         self.sw = StopWord()
-
-        thread_count = 8
-        if len(sys.argv) == 2:
-            thread_count = int(sys.argv[1])
-        self.pool = mp.ThreadingPool(thread_count)
-
-        self.co_occ = CoOccurrence(pool=self.pool)
+        self.co_occ = CoOccurrence()
         self.co_occurring_words = []
 
     def __extract_lecture_tokens(self, lecture):
@@ -42,11 +34,20 @@ class Tokenizer(object):
         for sentence in sentences:
             tokenized_sentence = word_tokenize(sentence)
             clean_sentence = []
+            prev_word = ''
             for token in tokenized_sentence:
                 token = token.lower()
 
+                if prev_word:
+                    token = prev_word + token
+                    prev_word = ''
+
+                if len(token) < 3:
+                    continue
+
                 # check if string consists of alphabetic characters only, don't include teacher names
-                if (not (token.isalpha() and len(token) > 2)) or any([token in w for w in self.sw.teachers]):
+                skip, prev_word = self.__is_alpha(token)
+                if skip or any([token in w for w in self.sw.teachers]):
                     continue
 
                 try:
@@ -57,6 +58,10 @@ class Tokenizer(object):
                 except Exception:
                     lem_word = token
 
+                #Post-lemmatization length check
+                if len(lem_word) < 3:
+                    continue
+
                 if lem_word not in self.sw.words:
                     clean_sentence.append(lem_word)
                     if self.debug:
@@ -65,9 +70,27 @@ class Tokenizer(object):
                         token_dict[lem_word] += 1
                     else:
                         token_dict[lem_word] = 1
+            clean_sentence.append('')  # Empty string, so that sentence would end with a space
             clean_sentences.append(' '.join(clean_sentence))
 
         return lecture, token_dict, clean_sentences
+
+    @staticmethod
+    def __is_alpha(token):
+        if token.isalpha():
+            return False, ''
+        #Special handling of '-' case
+        sym = [i for i, ltr in enumerate(token) if ltr == '-']
+        if not sym or not token.replace('-', '').isalpha():
+            return True, ''
+
+        last = len(token)-1
+        for idx in sym:
+            if idx == 0:
+                return True, ''
+            if idx == last:
+                return True, token[:-1]
+        return False, ''
 
     @staticmethod
     def __is_estonian(text):
@@ -93,17 +116,17 @@ class Tokenizer(object):
 
     def extract_all_lectures_tokens(self):
         # Tokenize and clean each lecture separately
-        result_data = [x for x in self.pool.map(self.__extract_lecture_tokens, Lecture.select()) if x]
+        result_data = [x for x in (self.__extract_lecture_tokens(lec) for lec in Lecture.select()) if x]
 
-        # Perform co-occurrence over entire word corpus, filter by course id limit
-        docs = [(y[0].course.id, y[2]) for y in result_data]
+        # Perform co-occurrence over entire word corpus, filter by course code limit
+        docs = [(y[0].course.code, y[2]) for y in result_data]
         self.co_occurring_words = self.co_occ.find_co_occurring_words(docs)
         print self.co_occurring_words
         # Re-count co-occurring words and remove 'standalone' words
-        result_data = self.pool.map(self.__adjust_lecture_counts, result_data)
+        result_data = [self.__adjust_lecture_counts(res_data) for res_data in result_data]
 
         # Compose data set for mass insert
-        persistent_tokens = self.pool.map(self.__compose_lecture_rows, result_data)
+        persistent_tokens = [self.__compose_lecture_rows(entry) for entry in result_data]
 
         # One atomic bulk insert for faster performance
         with db.atomic():
@@ -113,10 +136,18 @@ class Tokenizer(object):
         token_dict = res_data[1]
         clean_sentences = res_data[2]
         for word in self.co_occurring_words:
+            contains = True
             for single_word in word.split(' '):
                 if single_word in token_dict:  # Delete words that that make up co-occurring words
                     del token_dict[single_word]
-            count = sum([x.count(word) for x in clean_sentences])
+                else:
+                    contains = False
+
+            #Dictionary has to contain individual words, skip if it doesn't
+            if not contains:
+                continue
+
+            count = sum([x.count(''.join([word, ' '])) for x in clean_sentences])
             if count > 0:
                 token_dict[word] = count
 
@@ -142,7 +173,7 @@ class Tokenizer(object):
         return lecture_words
 
     def create_all_course_tokens(self):
-        result_courses = self.pool.map(self.__create_course_tokens, self.__get_courses())
+        result_courses = [self.__create_course_tokens(course) for course in self.__get_courses()]
 
         with db.atomic():
             CourseWord.insert_many([x for y in result_courses for x in y]).execute()
@@ -186,16 +217,16 @@ class Tokenizer(object):
             else:
                 token_dict[course_word.word] = course_word.count
 
-        infrequent_words = [k for k, v in token_dict if v < 3]
-        for k in infrequent_words:
+        __infrequent_words = [k for k, v in token_dict.items() if v < 3]
+        for k in __infrequent_words:
             del token_dict[k]
 
-        result_corpus = self.pool.map(self.__compose_corpus_rows, token_dict.items())
+        result_corpus = [self.__compose_corpus_rows(word) for word in token_dict.items()]
 
         with db.atomic():
             CorpusWord.insert_many(result_corpus).execute()
 
-        return infrequent_words
+        return __infrequent_words
 
     @staticmethod
     def __compose_corpus_rows(token):
