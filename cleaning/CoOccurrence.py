@@ -27,7 +27,7 @@ class CoOccurrence(object):
 
         all_co_occurrences = {}
         for doc in docs:
-            if len(doc[1]) == 1 and doc[1][0].count(' ') < 2:
+            if not doc[1] or (len(doc[1]) == 1 and doc[1][0].count(' ') < 3):
                 continue
 
             co_occurrences = self.count_model.fit_transform(doc[1])

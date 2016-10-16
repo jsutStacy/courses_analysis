@@ -2,10 +2,12 @@ from nltk import WordNetLemmatizer
 from nltk import sent_tokenize, word_tokenize
 from db.DataModel import db, Course, Lecture, LectureWord, CourseWord, CorpusWord
 from StopWord import StopWord
-from CleanWordTables import Cleaner
 from CoOccurrence import CoOccurrence
 from pyvabamorf import analyze
 from langdetect import detect
+import pathos.multiprocessing as mp
+import time
+import datetime
 
 
 class Tokenizer(object):
@@ -15,12 +17,17 @@ class Tokenizer(object):
         self.sw = StopWord()
         self.co_occ = CoOccurrence()
         self.co_occurring_words = []
+        self.detect_lang = detect
+        self.tokenize_sent = sent_tokenize
+        self.tokenize_word = word_tokenize
+        self.lemmatize_est = analyze
+        self.pool = mp.ProcessingPool(8)
 
     def __extract_lecture_tokens(self, lecture):
         print "Course {} Lecture: {}".format(lecture.course.id, lecture.id)
         text = lecture.content
         try:
-            sentences = sent_tokenize(text)  # Split raw text to sentences
+            sentences = self.tokenize_sent(text)  # Split raw text to sentences
         except UnicodeEncodeError:
             sentences = []
 
@@ -32,8 +39,8 @@ class Tokenizer(object):
         token_dict = {}
         clean_sentences = []  # Keep track of sentences once they have been cleaned for co-occurrence
         for sentence in sentences:
-            tokenized_sentence = word_tokenize(sentence)
-            clean_sentence = []
+            tokenized_sentence = self.tokenize_word(sentence)
+            clean_sentence = ['']
             prev_word = ''
             for token in tokenized_sentence:
                 token = token.lower()
@@ -52,10 +59,11 @@ class Tokenizer(object):
 
                 try:
                     if est_text:
-                        lem_word = analyze(token)[0]['analysis'][0]['lemma']
+                        lem_word = self.lemmatize_est(token)[0]['analysis'][0]['lemma']
                     else:
                         lem_word = self.lemmatizer.lemmatize(token)
-                except Exception:
+                except Exception as e:
+                    print e
                     lem_word = token
 
                 #Post-lemmatization length check
@@ -70,8 +78,9 @@ class Tokenizer(object):
                         token_dict[lem_word] += 1
                     else:
                         token_dict[lem_word] = 1
-            clean_sentence.append('')  # Empty string, so that sentence would end with a space
-            clean_sentences.append(' '.join(clean_sentence))
+            if len(clean_sentence) > 1:
+                clean_sentence.append('')  # Empty string, so that sentence would end with a space
+                clean_sentences.append(' '.join(clean_sentence))
 
         return lecture, token_dict, clean_sentences
 
@@ -92,13 +101,12 @@ class Tokenizer(object):
                 return True, token[:-1]
         return False, ''
 
-    @staticmethod
-    def __is_estonian(text):
+    def __is_estonian(self, text):
         est = False
         try:
-            est = detect(text) == 'et'
-        except Exception:
-            pass
+            est = self.detect_lang(text) == 'et'
+        except Exception as e:
+            print e
         return est
 
     @staticmethod
@@ -116,7 +124,7 @@ class Tokenizer(object):
 
     def extract_all_lectures_tokens(self):
         # Tokenize and clean each lecture separately
-        result_data = [x for x in (self.__extract_lecture_tokens(lec) for lec in Lecture.select()) if x]
+        result_data = [x for x in (self.pool.map(self.__extract_lecture_tokens, Lecture.select())) if x]
 
         # Perform co-occurrence over entire word corpus, filter by course code limit
         docs = [(y[0].course.code, y[2]) for y in result_data]
@@ -147,7 +155,7 @@ class Tokenizer(object):
             if not contains:
                 continue
 
-            count = sum([x.count(''.join([word, ' '])) for x in clean_sentences])
+            count = sum([x.count(' '.join(['', word, ''])) for x in clean_sentences])
             if count > 0:
                 token_dict[word] = count
 
@@ -217,22 +225,24 @@ class Tokenizer(object):
             else:
                 token_dict[course_word.word] = course_word.count
 
-        __infrequent_words = [k for k, v in token_dict.items() if v < 3]
-        for k in __infrequent_words:
-            del token_dict[k]
-
         result_corpus = [self.__compose_corpus_rows(word) for word in token_dict.items()]
 
         with db.atomic():
             CorpusWord.insert_many(result_corpus).execute()
-
-        return __infrequent_words
 
     @staticmethod
     def __compose_corpus_rows(token):
         return {'word': token[0],
                 'count': token[1],
                 'active': True}
+
+
+def measure_time(function, task_str):
+    start = time.clock()
+    try:
+        return function()
+    finally:
+        print '{} in {}'.format(task_str, str(datetime.timedelta(seconds=time.clock()-start)))
 
 if __name__ == '__main__':
     tok = Tokenizer()
@@ -243,14 +253,10 @@ if __name__ == '__main__':
     #download('punkt')
 
     print "Extracting all lecture tokens"
-    tok.extract_all_lectures_tokens()
+    measure_time(tok.extract_all_lectures_tokens, "Extracted lecture tokens")
 
     print "Creating course tokens"
-    tok.create_all_course_tokens()
+    measure_time(tok.create_all_course_tokens, "Created course tokens")
 
     print "Creating corpus tokens"
-    infrequent_words = tok.create_corpus_tokens()
-
-    # Remove infrequent words from other word tables
-    cleaner = Cleaner()
-    cleaner.clean_infrequent_words(infrequent_words)
+    measure_time(tok.create_corpus_tokens, "Created corpus tokens")
