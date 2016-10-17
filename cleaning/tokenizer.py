@@ -131,7 +131,8 @@ class Tokenizer(object):
         self.co_occurring_words = self.co_occ.find_co_occurring_words(docs)
         print self.co_occurring_words
         # Re-count co-occurring words and remove 'standalone' words
-        result_data = [self.__adjust_lecture_counts(res_data) for res_data in result_data]
+        #result_data = [self.__adjust_lecture_counts(res_data) for res_data in result_data]
+        result_data = self.pool.map(self.__adjust_lecture_counts, result_data)
 
         # Compose data set for mass insert
         persistent_tokens = [self.__compose_lecture_rows(entry) for entry in result_data]
@@ -143,11 +144,12 @@ class Tokenizer(object):
     def __adjust_lecture_counts(self, res_data):
         token_dict = res_data[1]
         clean_sentences = res_data[2]
+        removable_words = set()
         for word in self.co_occurring_words:
             contains = True
             for single_word in word.split(' '):
-                if single_word in token_dict:  # Delete words that that make up co-occurring words
-                    del token_dict[single_word]
+                if single_word in token_dict:
+                    removable_words.add(single_word)
                 else:
                     contains = False
 
@@ -158,6 +160,10 @@ class Tokenizer(object):
             count = sum([x.count(' '.join(['', word, ''])) for x in clean_sentences])
             if count > 0:
                 token_dict[word] = count
+
+        # Delete words that that make up co-occurring words
+        for w in removable_words:
+            del token_dict[w]
 
         return res_data[0], token_dict
 

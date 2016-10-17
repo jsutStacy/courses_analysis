@@ -103,7 +103,7 @@ class TopicModeling(object):
         topic_word_rows = []
         # Iterate over topic word distributions
         for i, topic_dist in enumerate(model.topic_word_):
-            top_topic_words = np.array(vocab)[np.argsort(topic_dist)][:-self.n_top_words - 1:-1]
+            top_topic_words = np.array(vocab)[self.__max_values(topic_dist, self.n_top_words)]
             top_word_probs = topic_dist[np.argsort(topic_dist)][:-self.n_top_words - 1:-1]
 
             for top_word, top_weight in zip(top_topic_words, top_word_probs):
@@ -140,6 +140,15 @@ class TopicModeling(object):
             LDALogLikelihood.insert_many(log_likelihoods).execute()
             TopicWord.insert_many(topic_word_rows).execute()
             CourseTopic.insert_many(course_topic_rows).execute()
+
+    @staticmethod
+    def __max_values(arr, top):
+        indices = np.zeros(top, int)
+        for i in xrange(top):
+            idx = np.argmax(arr)
+            indices[i] = idx
+            arr[idx] = -1
+        return indices
 
     def __perform_lda_default(self, word_dict, n_topics):
         # Initialize the "DictVectorizer" object, which is scikit-learn's
