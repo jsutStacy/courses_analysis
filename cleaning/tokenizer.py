@@ -17,6 +17,7 @@ class Tokenizer(object):
         self.sw = StopWord()
         self.co_occ = CoOccurrence()
         self.co_occurring_words = []
+        self.acronyms = {}
         self.detect_lang = detect
         self.tokenize_sent = sent_tokenize
         self.tokenize_word = word_tokenize
@@ -38,12 +39,14 @@ class Tokenizer(object):
 
         token_dict = {}
         clean_sentences = []  # Keep track of sentences once they have been cleaned for co-occurrence
+        potential_acronyms = []  # Words that could potentially be acronyms
+        acronym_def = {}  # Words that are definitely acronyms, process as definitions
         for sentence in sentences:
             tokenized_sentence = self.tokenize_word(sentence)
             clean_sentence = ['']
             prev_word = ''
-            for token in tokenized_sentence:
-                token = token.lower()
+            for i in range(len(tokenized_sentence)):
+                token = tokenized_sentence[i].lower()
 
                 if prev_word:
                     token = prev_word + token
@@ -57,14 +60,20 @@ class Tokenizer(object):
                 if skip or any([token in w for w in self.sw.teachers]):
                     continue
 
-                try:
-                    if est_text:
-                        lem_word = self.lemmatize_est(token)[0]['analysis'][0]['lemma']
-                    else:
-                        lem_word = self.lemmatizer.lemmatize(token)
-                except Exception as e:
-                    print e
-                    lem_word = token
+                lem_word = token
+                acronym, definition = self.__resolve_potential_acronym(tokenized_sentence, i)
+                if definition:
+                    acronym_def[acronym] = definition
+                elif acronym:
+                    potential_acronyms.append(acronym)
+                else:  # Don't lemmatize acronyms
+                    try:
+                        if est_text:
+                            lem_word = self.lemmatize_est(token)[0]['analysis'][0]['lemma']
+                        else:
+                            lem_word = self.lemmatizer.lemmatize(token)
+                    except Exception as e:
+                        print e
 
                 #Post-lemmatization length check
                 if len(lem_word) < 3:
@@ -101,6 +110,34 @@ class Tokenizer(object):
                 return True, token[:-1]
         return False, ''
 
+    @staticmethod
+    def __resolve_potential_acronym(sentence, token_idx):
+        w = sentence[token_idx]
+        if len(w) > 4 or not w.isupper():
+            return None, None
+
+        #Not the first or the final word
+        w = w.lower()
+        sent_len = len(sentence)
+        if sent_len == token_idx + 1:
+            return w, None
+
+        # Check if definition is in parenthesis
+        next_w = sentence[token_idx+1]
+        right_idx = token_idx + len(w) + 2
+        if next_w == '(' and sent_len > right_idx and sentence[right_idx] == ')':  # Definition is in parenthesis
+            definition = sentence[token_idx+2:right_idx]
+            if all([True if definition[i][0].lower() == w[i] else False for i in range(len(definition))]):
+                return w, ' '.join(definition).lower()
+
+        # Check if acronym is in parenthesis
+        left_idx = token_idx - (len(w)+1)
+        if next == ')' and left_idx >= 0 and sentence[token_idx-1] == '(':
+            definition = sentence[left_idx:token_idx-1]
+            if all([True if definition[i][0].lower() == w[i] else False for i in range(len(definition))]):
+                return w, ' '.join(definition).lower()
+        return w, None
+
     def __is_estonian(self, text):
         est = False
         try:
@@ -126,12 +163,15 @@ class Tokenizer(object):
         # Tokenize and clean each lecture separately
         result_data = [x for x in (self.pool.map(self.__extract_lecture_tokens, Lecture.select())) if x]
 
+        #Create acronym dictionary and replace acronyms with definitions
+        self.acronyms = {k: v for a, b, c, d, e in result_data for k, v in e.iteritems()}
+        result_data = self.pool.map(self.__replace_acronyms, result_data)
+
         # Perform co-occurrence over entire word corpus, filter by course code limit
         docs = [(y[0].course.code, y[2]) for y in result_data]
-        self.co_occurring_words = self.co_occ.find_co_occurring_words(docs)
+        self.co_occurring_words = self.co_occ.find_co_occurring_words(docs, self.acronyms)
         print self.co_occurring_words
         # Re-count co-occurring words and remove 'standalone' words
-        #result_data = [self.__adjust_lecture_counts(res_data) for res_data in result_data]
         result_data = self.pool.map(self.__adjust_lecture_counts, result_data)
 
         # Compose data set for mass insert
@@ -140,6 +180,17 @@ class Tokenizer(object):
         # One atomic bulk insert for faster performance
         with db.atomic():
             LectureWord.insert_many([x for y in persistent_tokens for x in y]).execute()
+
+    def __replace_acronyms(self, res):
+        word_dict = res[1]
+        potential_acronyms = res[3]
+        for acronym in potential_acronyms:
+            if acronym in self.acronyms:  # Legit acronym, replace it
+                count = word_dict[acronym]
+                del word_dict[acronym]
+                word_dict[self.acronyms[acronym]] = count
+
+        return res[0], word_dict, res[2]  # lecture, dictionary, clean sentences
 
     def __adjust_lecture_counts(self, res_data):
         token_dict = res_data[1]
@@ -153,13 +204,16 @@ class Tokenizer(object):
                 else:
                     contains = False
 
-            #Dictionary has to contain individual words, skip if it doesn't
+            #Dictionary has to contain individual words, skip counting if it doesn't
             if not contains:
                 continue
 
             count = sum([x.count(' '.join(['', word, ''])) for x in clean_sentences])
             if count > 0:
-                token_dict[word] = count
+                if word in token_dict:  # Could be an acronym
+                    token_dict[word] += count
+                else:
+                    token_dict[word] = count
 
         # Delete words that that make up co-occurring words
         for w in removable_words:

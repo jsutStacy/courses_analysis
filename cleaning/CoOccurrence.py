@@ -4,9 +4,9 @@ import numpy as np
 
 class CoOccurrence(object):
 
-    def __init__(self, ngram_range=(2, 3), word_limit = 20, id_limit=3):
+    def __init__(self, ngram_range=(2, 4), word_limit = 20, id_limit=3):
         """
-        E.g ngram_range(2,3) specifies that we are only interested in n-grams of size 2 and 3.
+        E.g ngram_range(2,4) specifies that we are only interested in n-grams of size 2 and 4.
 
         word_limit specifies the minimum amount of times a co-occurring word should be present
         over entire corpus.
@@ -19,9 +19,10 @@ class CoOccurrence(object):
         self.limit = word_limit
         self.id_limit = id_limit
 
-    def find_co_occurring_words(self, docs):
+    def find_co_occurring_words(self, docs, acronyms):
         """
         :param docs: list of pairs with the first value being a unique id, second lecture sentences
+        :param acronyms: list of all acronyms
         :return: a filtered list of n-grams
         """
 
@@ -40,8 +41,8 @@ class CoOccurrence(object):
                     idx = [doc[0]]
                     all_co_occurrences[i] = [j, set(idx)]
 
-        return self.__clean([k for k, v in all_co_occurrences.items() if v[0] >= self.limit
-                             and len(v[1]) >= self.id_limit])
+        return self.__clean([k for k, v in all_co_occurrences.items()
+                             if (v[0] >= self.limit and len(v[1]) >= self.id_limit) or k in acronyms])
 
     def __clean(self, words):
         """

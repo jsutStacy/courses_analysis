@@ -12,7 +12,7 @@ import os.path
 
 
 class Pdf2Txt(object):
-    def __init__(self, prefix, process_count=1):
+    def __init__(self, prefix, process_count=8):
         self.prefix = prefix
         self.caching = True
         self.codec = 'utf-8'
