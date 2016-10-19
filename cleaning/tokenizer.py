@@ -39,7 +39,7 @@ class Tokenizer(object):
 
         token_dict = {}
         clean_sentences = []  # Keep track of sentences once they have been cleaned for co-occurrence
-        potential_acronyms = []  # Words that could potentially be acronyms
+        potential_acronyms = set()  # Words that could potentially be acronyms
         acronym_def = {}  # Words that are definitely acronyms, process as definitions
         for sentence in sentences:
             tokenized_sentence = self.tokenize_word(sentence)
@@ -63,9 +63,10 @@ class Tokenizer(object):
                 lem_word = token
                 acronym, definition = self.__resolve_potential_acronym(tokenized_sentence, i)
                 if definition:
+                    potential_acronyms.add(acronym)
                     acronym_def[acronym] = definition
                 elif acronym:
-                    potential_acronyms.append(acronym)
+                    potential_acronyms.add(acronym)
                 else:  # Don't lemmatize acronyms
                     try:
                         if est_text:
@@ -79,7 +80,8 @@ class Tokenizer(object):
                 if len(lem_word) < 3:
                     continue
 
-                if lem_word not in self.sw.words:
+                if (est_text and lem_word not in self.sw.et_words)\
+                        or (not est_text and lem_word not in self.sw.en_words):
                     clean_sentence.append(lem_word)
                     if self.debug:
                         print "{}: {}".format(token.encode('utf-8'), lem_word.encode('utf-8'))
@@ -91,7 +93,7 @@ class Tokenizer(object):
                 clean_sentence.append('')  # Empty string, so that sentence would end with a space
                 clean_sentences.append(' '.join(clean_sentence))
 
-        return lecture, token_dict, clean_sentences
+        return lecture, token_dict, clean_sentences, potential_acronyms, acronym_def
 
     @staticmethod
     def __is_alpha(token):
@@ -113,7 +115,7 @@ class Tokenizer(object):
     @staticmethod
     def __resolve_potential_acronym(sentence, token_idx):
         w = sentence[token_idx]
-        if len(w) > 4 or not w.isupper():
+        if len(w) > 4 or not w[0].isupper():
             return None, None
 
         #Not the first or the final word
@@ -185,7 +187,7 @@ class Tokenizer(object):
         word_dict = res[1]
         potential_acronyms = res[3]
         for acronym in potential_acronyms:
-            if acronym in self.acronyms:  # Legit acronym, replace it
+            if acronym in self.acronyms and acronym in word_dict:  # Legit acronym, replace it
                 count = word_dict[acronym]
                 del word_dict[acronym]
                 word_dict[self.acronyms[acronym]] = count
