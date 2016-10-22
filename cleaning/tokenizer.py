@@ -8,6 +8,7 @@ from langdetect import detect
 import pathos.multiprocessing as mp
 import time
 import datetime
+import copy
 
 
 class Tokenizer(object):
@@ -174,10 +175,16 @@ class Tokenizer(object):
         self.co_occurring_words = self.co_occ.find_co_occurring_words(docs, self.acronyms)
         print self.co_occurring_words
         # Re-count co-occurring words and remove 'standalone' words
-        result_data = self.pool.map(self.__adjust_lecture_counts, result_data)
+        return self.pool.map(self.__adjust_lecture_counts, result_data)
+
+    def persist_lecture_dict(self, lecture_data, rem_words):
+        for w in rem_words:
+            for lecture, lecture_dict in lecture_data:
+                if w in lecture_dict:
+                    del lecture_dict[w]
 
         # Compose data set for mass insert
-        persistent_tokens = [self.__compose_lecture_rows(entry) for entry in result_data]
+        persistent_tokens = [self.__compose_lecture_rows(entry) for entry in lecture_data]
 
         # One atomic bulk insert for faster performance
         with db.atomic():
@@ -231,7 +238,6 @@ class Tokenizer(object):
             row_dict = {'lecture': lecture_row[0],
                         'word': token,
                         'count': token_dict[token],
-                        'active': True,
                         'weight': 0}
             rows.append(row_dict)
 
@@ -242,67 +248,85 @@ class Tokenizer(object):
         lecture_words = list(LectureWord.select().where(LectureWord.lecture == lecture))
         return lecture_words
 
-    def create_all_course_tokens(self):
-        result_courses = [self.__create_course_tokens(course) for course in self.__get_courses()]
+    @staticmethod
+    def create_all_course_tokens(lecture_data):
+        course_dicts = {}
+        for lecture, lec_dict in lecture_data:
+            course_id = lecture.course.id
+            if course_id in course_dicts:
+                info = course_dicts[course_id]
+                for k, v in lec_dict.items():
+                    if k in info[1]:
+                        info[1][k] += lec_dict[k]  # word count
+                    else:
+                        info[1][k] = lec_dict[k]
+            else:
+                course_dicts[course_id] = [lecture.course, copy.deepcopy(lec_dict)]
+        return course_dicts
+
+    def persist_course_dict(self, courses_data, rem_words):
+        for w in rem_words:
+            for course_id, course_info in courses_data.items():
+                if w in course_info[1]:
+                    del course_info[1][w]
+
+        result_courses = [self.__compose_course_rows(entry) for entry in courses_data.items()]
 
         with db.atomic():
             CourseWord.insert_many([x for y in result_courses for x in y]).execute()
 
-    def __create_course_tokens(self, course):
-        print "{}: {}".format(course.id, course.name.encode('utf8'))
-        token_dict = {}
-        lecture_token = {}
-
-        for lecture in self.__get_lectures(course):
-            lecture_words = self.__get_lecture_words(lecture)
-            for lecture_word in lecture_words:
-                if not lecture_word.word in token_dict:
-                    token_dict[lecture_word.word] = 0
-                    lecture_token[lecture_word.word] = 0
-
-                token_dict[lecture_word.word] += lecture_word.count
-                lecture_token[lecture_word.word] += 1
-
-        return self.__compose_course_rows(course, token_dict, lecture_token)
-
     @staticmethod
-    def __compose_course_rows(course, token_dict, lecture_token):
+    def __compose_course_rows(entry):
         rows = []
-
-        for token in token_dict:
+        course = entry[1][0]
+        for word, word_info in entry[1][1].items():
             row_dict = {'course': course,
-                        'word': token,
-                        'count': token_dict[token],
-                        'active': True,
-                        'lectures': lecture_token[token]}
+                        'word': word,
+                        'count': word_info}  # remove
             rows.append(row_dict)
-
         return rows
 
-    def create_corpus_tokens(self):
-        token_dict = {}
-        for course_word in CourseWord.select():
-            if course_word.word in token_dict:
-                token_dict[course_word.word] += course_word.count
-            else:
-                token_dict[course_word.word] = course_word.count
+    def create_corpus_tokens(self, courses_data):
+        corpus_dict = {}
 
-        result_corpus = [self.__compose_corpus_rows(word) for word in token_dict.items()]
+        for course_id, course_info in courses_data.items():
+            course = course_info[0]
+            course_dict = course_info[1]
+            for word, count in course_dict.items():
+                if word in corpus_dict:
+                    corpus_dict[word][0] += count
+                    corpus_dict[word][1].add(course.code)
+                else:
+                    word_courses = [course.code]
+                    corpus_dict[word] = [count, set(word_courses)]
+
+        rem_words = []
+        for word, word_info in corpus_dict.items():
+            count = word_info[0]
+            courses_count = len(word_info[1])
+            if count < 5 or courses_count < 3:
+                rem_words.append(word)
+
+        for word in rem_words:
+            del corpus_dict[word]
+
+        result_corpus = [self.__compose_corpus_rows(item) for item in corpus_dict.items()]
 
         with db.atomic():
             CorpusWord.insert_many(result_corpus).execute()
 
+        return rem_words
+
     @staticmethod
-    def __compose_corpus_rows(token):
-        return {'word': token[0],
-                'count': token[1],
-                'active': True}
+    def __compose_corpus_rows(item):
+        return {'word': item[0],
+                'count': item[1][0]}
 
 
-def measure_time(function, task_str):
+def measure_time(function, task_str, *args):
     start = time.clock()
     try:
-        return function()
+        return function(*args)
     finally:
         print '{} in {}'.format(task_str, str(datetime.timedelta(seconds=time.clock()-start)))
 
@@ -315,10 +339,14 @@ if __name__ == '__main__':
     #download('punkt')
 
     print "Extracting all lecture tokens"
-    measure_time(tok.extract_all_lectures_tokens, "Extracted lecture tokens")
+    lec_data = measure_time(tok.extract_all_lectures_tokens, "Extracted lecture tokens")
 
     print "Creating course tokens"
-    measure_time(tok.create_all_course_tokens, "Created course tokens")
+    course_data = measure_time(tok.create_all_course_tokens, "Created course tokens", lec_data)
 
     print "Creating corpus tokens"
-    measure_time(tok.create_corpus_tokens, "Created corpus tokens")
+    removable = measure_time(tok.create_corpus_tokens, "Created corpus tokens", course_data)
+
+    # Remove infrequent words and persist lecture and course words
+    tok.persist_lecture_dict(lec_data, removable)
+    tok.persist_course_dict(course_data, removable)

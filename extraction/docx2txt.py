@@ -15,11 +15,13 @@ class Docx2txt(object):
         if not os.path.exists(path):
             print "File not found: {0}".format(path)
             return
+        try:
+            doc = docx.Document(path)
+            print lecture.url
 
-        doc = docx.Document(path)
-        print lecture.url
-
-        lecture.content = '\n'.join([p for p in doc.paragraphs])
+            lecture.content = '\n'.join([p for p in doc.paragraphs])
+        except Exception as e:
+            print "Skipping due to ", e
 
         return lecture
 

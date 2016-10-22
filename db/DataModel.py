@@ -32,7 +32,6 @@ class LectureWord(BaseModel):
     lecture = peewee.ForeignKeyField(Lecture)
     word = peewee.CharField()
     count = peewee.IntegerField()
-    active = peewee.BooleanField()
     weight = peewee.DoubleField()
 
 
@@ -40,14 +39,11 @@ class CourseWord(BaseModel):
     course = peewee.ForeignKeyField(Course)
     word = peewee.CharField()
     count = peewee.IntegerField()
-    active = peewee.BooleanField()
-    lectures = peewee.IntegerField()
 
 
 class CorpusWord(BaseModel):
     word = peewee.CharField()
     count = peewee.IntegerField()
-    active = peewee.BooleanField()
 
 
 class TopicWord(BaseModel):

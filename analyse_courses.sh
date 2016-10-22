@@ -5,7 +5,12 @@ export PYTHONPATH=.
 
 function run {
 	START_TIME=$SECONDS
-	make $1
+	if [ -n "$3" ]
+		then
+			make $1 $3
+		else
+			make $1
+	fi
 	ELAPSED_TIME=$(($SECONDS - $START_TIME))
 	mkdir -p -v backup/$1
 	cp db/courses.sqlite backup/$1
@@ -16,7 +21,7 @@ echo "Cleaning previous data..."
 make clean-analysis
 
 echo "Starting to scrape data..."
-run "scrape SEMESTERS="$SEMESTERS 'Finished scraping data'
+run scrape "Finished scraping data" "SEMESTERS="$SEMESTERS
 
 echo "Starting to extract data from downloaded files..."
 run extract "Finished extracting data"
