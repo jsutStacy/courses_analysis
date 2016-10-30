@@ -51,7 +51,7 @@ class MoodleSpider(scrapy.Spider):
                     item["code"] = course_code
                     item["year"] = self.semester['year']
                     item["semester"] = self.semester['semester']
-                    yield item
+                    #yield item
 
                     request = scrapy.Request(link, callback=self.parse_single_course)
                     request.meta['course'] = item
@@ -120,7 +120,8 @@ class MoodleSpider(scrapy.Spider):
 
         item = DataItem()
         item['link'] = link
-        item['path'] = '/' + self.semester['year'] + '/' + self.semester['semester'] + '/moodle/' + course['code']
+        item['path'] = '/' + self.semester['year'] + '/' + self.semester['semester'] + '/moodle/' + course['code'] \
+            if not content else ''
         item['content'] = content
         item['course_code'] = course['code']
         item['year'] = [self.semester['year']]

@@ -1,7 +1,7 @@
 from db.DataModel import Lecture, db
 import peewee
 import os.path
-from pptx import Presentation, exc
+from pptx import Presentation
 import pathos.multiprocessing as mp
 
 
@@ -35,7 +35,7 @@ class Pptx2Txt(object):
 
             ret_val = ' '.join(text_runs)
 
-        except exc.PythonPptxError as e:
+        except Exception as e:
             print "Could not extract text {0}".format(e)
 
         lecture.content = ret_val

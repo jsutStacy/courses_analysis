@@ -55,8 +55,8 @@ class DataPipeline(object):
 
             course = Course.select().where(Course.code == course_code, Course.year == year, Course.semester == semester)
             if not course.exists():
-                course = None
                 print "Non-existing course: {}".format(course_code)
+                return
 
             if len(content) == 0 and not os.path.exists(dir_name):
                 try:
@@ -103,7 +103,4 @@ class DataPipeline(object):
     @staticmethod
     def __get_title(url):
         title = url.split("/")
-        if url.endswith(ALLOWED_EXTENSIONS):
-            return title[-1]
-        else:
-            return "Web content - " + str(title[-1])
+        return title[-1] if url.endswith(ALLOWED_EXTENSIONS) else "Web content - " + str(title[-1])

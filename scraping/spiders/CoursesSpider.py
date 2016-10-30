@@ -66,35 +66,32 @@ class CoursesSpider(scrapy.Spider):
     def parse_article(self, response):
         try:
             for sel in response.xpath("//article[@class=\"content\"]"):
-                item = DataItem()
-                item['link'] = response.url
-                item['path'] = ''
-                item['content'] = sel.extract()
-                course = response.meta['course']
-                item['course_code'] = course['code']
-                item['year'] = response.meta['year']
-                item['semester'] = response.meta['semester']
-                yield item
+                yield self.__create_data_item(response.url, sel.extract(), response)
         except AttributeError:
             pass
 
         for sel in response.xpath("//a"):
             t_link = ''.join(sel.xpath("@href").extract())
             if self.__is_valid_url(t_link):
-                item = DataItem()
+                item = self.__create_data_item(sel.xpath("@href").extract(), '', response)
                 item['title'] = sel.xpath("text()").extract()
-                item['link'] = sel.xpath("@href").extract()
-                item['path'] = '/' + ''.join(response.url).replace(self.filter_url, '')
-                course = response.meta['course']
-                item['course_code'] = course['code']
-                item['content'] = ''
-                item['year'] = response.meta['year']
-                item['semester'] = response.meta['semester']
                 yield item
+
+    def __create_data_item(self, link, content, response):
+        course = response.meta['course']
+
+        item = DataItem()
+        item['link'] = link
+        item['path'] = '/' + ''.join(response.url).replace(self.filter_url, '') if not content else ''
+        item['content'] = content
+        item['course_code'] = course['code']
+        item['year'] = response.meta['year']
+        item['semester'] = response.meta['semester']
+        return item
 
     @staticmethod
     def __parse_semesters(semesters_str):
-        semesters = []
+        semesters = set()
         for sem in semesters_str.split(","):
             if len(sem) != 5:
                 print "Invalid parameter length, expected 5, actual: {}".format(len(sem))
@@ -109,9 +106,9 @@ class CoursesSpider(scrapy.Spider):
                 print "Invalid semester, expected either F or S, actual: {}".format(sem[-1])
                 continue
 
-            semesters.append((sem[:4], season))
+            semesters.add((sem[:4], season))
 
-        return list(set(semesters))
+        return semesters
 
     @staticmethod
     def __is_valid_url(url):
