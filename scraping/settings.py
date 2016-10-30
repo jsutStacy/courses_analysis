@@ -26,3 +26,5 @@ ITEM_PIPELINES = {
     'scraping.pipelines.CoursePipeline': 300,
     'scraping.pipelines.DataPipeline': 400
 }
+
+ALLOWED_EXTENSIONS = ('.6up.pdf', '.pdf', '.pptx', '.docx', '.tex')

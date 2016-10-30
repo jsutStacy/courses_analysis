@@ -2,8 +2,8 @@
 
 import scrapy
 from scraping.items import CoursesItem
-from scraping.items import CoursePageItem
 from scraping.items import DataItem
+from scraping.settings import ALLOWED_EXTENSIONS
 
 
 class CoursesSpider(scrapy.Spider):
@@ -15,7 +15,6 @@ class CoursesSpider(scrapy.Spider):
     #Custom params
     filter_url = "https://courses.cs.ut.ee"
     allowed_semesters = []
-    allowed_extensions = ('.6up.pdf', '.pdf', '.pptx', '.docx')
 
     def __init__(self, semesters='', *args, **kwargs):
         """ Expected format '2016F,2014S' - i.e 2016 fall semester and 2014 spring semester
@@ -43,6 +42,8 @@ class CoursesSpider(scrapy.Spider):
             item["title"] = sel.xpath("a/text()").extract()
             item["link"] = sel.xpath("a/@href").extract()
             item["code"] = sel.xpath(".//span/text()").extract()
+            item["year"] = response.meta['year']
+            item["semester"] = response.meta['semester']
             yield item
             request = scrapy.Request(self.filter_url + ''.join(item['link']), callback=self.parse_navbar)
             request.meta['course'] = item
@@ -55,11 +56,8 @@ class CoursesSpider(scrapy.Spider):
             t_link = ''.join(sel.xpath("@href").extract())
             # only follow links in navbar that are inside allowed domain
             if t_link.find(self.filter_url) > -1:
-                item = CoursePageItem()
-                item["title"] = sel.xpath("text()").extract()
-                item["link"] = sel.xpath("@href").extract()
-                # yield item
-                request = scrapy.Request(''.join(item['link']), callback=self.parse_article)
+                page_link = sel.xpath("@href").extract()
+                request = scrapy.Request(''.join(page_link), callback=self.parse_article)
                 request.meta['course'] = response.meta['course']
                 request.meta['year'] = response.meta['year']
                 request.meta['semester'] = response.meta['semester']
@@ -115,5 +113,6 @@ class CoursesSpider(scrapy.Spider):
 
         return list(set(semesters))
 
-    def __is_valid_url(self, url):
-        return url.endswith(self.allowed_extensions) and url.find("action=upload") == -1
+    @staticmethod
+    def __is_valid_url(url):
+        return url.endswith(ALLOWED_EXTENSIONS) and url.find("action=upload") == -1

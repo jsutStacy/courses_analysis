@@ -12,8 +12,14 @@ clean-analysis:
 	rm -f db/courses.sqlite
 	python db/DataModel.py
 
-scrape:
+scrape-courses:
 	scrapy crawl courses -a semesters=$(SEMESTERS)
+	
+scrape-moodle:
+	scrapy crawl moodle
+
+scrape-teachers:
+	scrapy crawl teacher -o teachers.json
 
 extract:
 	python extraction/TextExtractor.py

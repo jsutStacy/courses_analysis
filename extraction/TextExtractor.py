@@ -3,7 +3,7 @@ from pdf2txt import Pdf2Txt
 from pptx2txt import Pptx2Txt
 from docx2txt import Docx2txt
 from db.DataModel import db, Course, Lecture
-from scraping.spiders.CoursesSpider import CoursesSpider
+from scraping.settings import ALLOWED_EXTENSIONS
 import os.path
 import sys
 import peewee
@@ -47,7 +47,7 @@ def __remove_duplicates():
 
 def __resolve_extension(word):
     res = ""
-    for extension in CoursesSpider.allowed_extensions:
+    for extension in ALLOWED_EXTENSIONS:
         if word.endswith(extension):
             res = extension
             break

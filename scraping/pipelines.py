@@ -10,7 +10,7 @@ from items import CoursesItem
 from items import DataItem
 import urllib
 from db.DataModel import Course, Lecture, db
-from spiders.CoursesSpider import CoursesSpider
+from scraping.settings import ALLOWED_EXTENSIONS
 import peewee
 
 
@@ -18,9 +18,8 @@ class CoursePipeline(object):
     def process_item(self, item, spider):
         if isinstance(item, CoursesItem):
             course_code = ''.join(item['code'])
-            course_time = item['link'][0].split("/")
-            year = course_time[1]
-            semester = ''.join(course_time[-1])
+            year = item['year']
+            semester = item['semester']
 
             #Check if entry already exists
             course = Course.select().where(Course.code == course_code, Course.year == year, Course.semester == semester)
@@ -32,7 +31,7 @@ class CoursePipeline(object):
                         Course.create(
                             code=course_code,
                             name=''.join(item['title']),
-                            year=year,
+                            year=item['year'],
                             semester=semester,
                             url=''.join(item['link']),
                             path='raw_data'.join(item['link'])
@@ -59,7 +58,7 @@ class DataPipeline(object):
                 course = None
                 print "Non-existing course: {}".format(course_code)
 
-            if not os.path.exists(dir_name):
+            if len(content) == 0 and not os.path.exists(dir_name):
                 try:
                     os.makedirs(dir_name)
                 except OSError as e:
@@ -94,8 +93,9 @@ class DataPipeline(object):
                 if len(content) > 0:
                     try:
                         with db.transaction():
-                            lecture.content = content
-                            lecture.save()
+                            lecture_instance = lecture.first()
+                            lecture_instance.content = content
+                            lecture_instance.save()
                     except peewee.OperationalError as e:
                         print e
         return item
@@ -103,7 +103,7 @@ class DataPipeline(object):
     @staticmethod
     def __get_title(url):
         title = url.split("/")
-        if url.endswith(CoursesSpider.allowed_extensions):
+        if url.endswith(ALLOWED_EXTENSIONS):
             return title[-1]
         else:
             return "Web content - " + str(title[-1])

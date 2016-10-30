@@ -12,11 +12,8 @@ class CoursesItem(scrapy.Item):
     title = scrapy.Field()
     link = scrapy.Field()
     code = scrapy.Field()
-
-
-class CoursePageItem(scrapy.Item):
-    title = scrapy.Field()
-    link = scrapy.Field()
+    year = scrapy.Field()
+    semester = scrapy.Field()
 
 
 class DataItem(scrapy.Item):
