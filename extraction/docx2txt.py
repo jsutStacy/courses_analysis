@@ -19,7 +19,7 @@ class Docx2txt(object):
             doc = docx.Document(path)
             print lecture.url
 
-            lecture.content = '\n'.join([p for p in doc.paragraphs])
+            lecture.content = '\n'.join([p.text for p in doc.paragraphs])
         except Exception as e:
             print "Skipping due to ", e
 
