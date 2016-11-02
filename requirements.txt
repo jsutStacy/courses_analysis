@@ -14,3 +14,4 @@ langdetect>=1.0.5
 pyvabamorf>=1.6
 pathos>=0.2.0
 python-docx>=0.8.6
+pylatexenc>=1.1

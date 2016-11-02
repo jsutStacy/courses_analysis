@@ -2,6 +2,7 @@ from html2txt import Html2txt
 from pdf2txt import Pdf2Txt
 from pptx2txt import Pptx2Txt
 from docx2txt import Docx2txt
+from tex2txt import Tex2txt
 from db.DataModel import db, Course, Lecture
 from scraping.settings import ALLOWED_EXTENSIONS
 import os.path
@@ -71,6 +72,9 @@ if __name__ == '__main__':
 
     print "Extracting text from docx files..."
     Docx2txt(prefix, process_count).extract_text()
+
+    print "Extracting text from tex files..."
+    Tex2txt(prefix, process_count).extract_text()
 
     print "Extracting text from pdf files..."
     Pdf2Txt(prefix, process_count).extract_text()
