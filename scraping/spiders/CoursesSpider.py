@@ -10,7 +10,8 @@ class CoursesSpider(scrapy.Spider):
     #Overridden params
     name = "courses"
     allowed_domains = ["courses.cs.ut.ee"]
-    start_urls = ["https://courses.cs.ut.ee/courses/old"]
+    start_urls = ["https://courses.cs.ut.ee/user/lang/en?userlang=en&redirect=%2Fcourses%2Fold",
+                  "http://courses.ms.ut.ee/user/lang/en?userlang=en&redirect=%2Fcourses%2Fold"]
 
     #Custom params
     filter_url = "https://courses.cs.ut.ee"

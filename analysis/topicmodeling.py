@@ -5,6 +5,7 @@ from sklearn.feature_extraction import DictVectorizer
 from db.DataModel import Course, Lecture, CourseWord, LectureWord, LectureTopic, LectureTopicWord
 from db.DataModel import db, TopicWord, CourseTopic, LDALogLikelihood
 import pathos.multiprocessing as mp
+from TopicNameResolver import TopicNameResolver
 
 
 class TopicModeling(object):
@@ -195,6 +196,9 @@ if __name__ == '__main__':
 
     # Perform LDA over all courses
     topic_model.lda_over_courses()
+
+    #Resolve course topic names
+    TopicNameResolver().name_topics()
 
     # Perform LDA over all material in scope of one course
     topic_model.lda_over_lectures()
