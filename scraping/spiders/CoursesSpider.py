@@ -9,12 +9,11 @@ from scraping.settings import ALLOWED_EXTENSIONS
 class CoursesSpider(scrapy.Spider):
     #Overridden params
     name = "courses"
-    allowed_domains = ["courses.cs.ut.ee"]
+    allowed_domains = ["courses.cs.ut.ee", "courses.ms.ut.ee"]
     start_urls = ["https://courses.cs.ut.ee/user/lang/en?userlang=en&redirect=%2Fcourses%2Fold",
                   "http://courses.ms.ut.ee/user/lang/en?userlang=en&redirect=%2Fcourses%2Fold"]
 
     #Custom params
-    filter_url = "https://courses.cs.ut.ee"
     allowed_semesters = []
 
     def __init__(self, semesters='', *args, **kwargs):
@@ -32,7 +31,9 @@ class CoursesSpider(scrapy.Spider):
                 # Choose only wanted semesters
                 for x in self.allowed_semesters:
                     if x[0] in link and x[1] in link:
-                        request = scrapy.Request(self.filter_url + ''.join(link), callback=self.parse_courses)
+                        filter_url = self.__determine_filter_url(response)
+                        request = scrapy.Request(filter_url + ''.join(link), callback=self.parse_courses)
+                        request.meta['filter'] = filter_url
                         request.meta['year'] = x[0]
                         request.meta['semester'] = x[1]
                         yield request
@@ -46,22 +47,24 @@ class CoursesSpider(scrapy.Spider):
             item["year"] = response.meta['year']
             item["semester"] = response.meta['semester']
             yield item
-            request = scrapy.Request(self.filter_url + ''.join(item['link']), callback=self.parse_navbar)
+            request = scrapy.Request(response.meta['filter'] + ''.join(item['link']), callback=self.parse_navbar)
             request.meta['course'] = item
             request.meta['year'] = response.meta['year']
             request.meta['semester'] = response.meta['semester']
+            request.meta['filter'] = response.meta['filter']
             yield request
 
     def parse_navbar(self, response):
         for sel in response.xpath("//nav[@class=\"sidebar\"]").xpath(".//a"):
             t_link = ''.join(sel.xpath("@href").extract())
             # only follow links in navbar that are inside allowed domain
-            if t_link.find(self.filter_url) > -1:
+            if t_link.find(response.meta['filter']) > -1:
                 page_link = sel.xpath("@href").extract()
                 request = scrapy.Request(''.join(page_link), callback=self.parse_article)
                 request.meta['course'] = response.meta['course']
                 request.meta['year'] = response.meta['year']
                 request.meta['semester'] = response.meta['semester']
+                request.meta['filter'] = response.meta['filter']
                 yield request
 
     def parse_article(self, response):
@@ -78,16 +81,27 @@ class CoursesSpider(scrapy.Spider):
                 item['title'] = sel.xpath("text()").extract()
                 yield item
 
-    def __create_data_item(self, link, content, response):
+    def __determine_filter_url(self, response):
+        filter_url = "https://" if "https:" in response.url else "http://"
+        for domain in self.allowed_domains:
+            if domain in response.url:
+                filter_url += domain
+                break
+
+        return filter_url
+
+    @staticmethod
+    def __create_data_item(link, content, response):
         course = response.meta['course']
 
         item = DataItem()
         item['link'] = link
-        item['path'] = '/' + ''.join(response.url).replace(self.filter_url, '') if not content else ''
+        item['path'] = '/' + ''.join(response.url).replace(response.meta['filter'], '') if not content else ''
         item['content'] = content
         item['course_code'] = course['code']
         item['year'] = response.meta['year']
         item['semester'] = response.meta['semester']
+
         return item
 
     @staticmethod

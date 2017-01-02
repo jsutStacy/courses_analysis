@@ -65,7 +65,7 @@ class TopicNameResolver(object):
         while not name[0].isalpha():
             name = name[1:len(name)]
 
-        return name.strip()
+        return name.strip().title()
 
 
 if __name__ == '__main__':
