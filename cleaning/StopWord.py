@@ -9,6 +9,9 @@ class StopWord(object):
         self.en_words = set(self.__load_stopwords('en'))
         self.teachers = set(self.__get_teacher_names())
 
+    def get_all_stopwords(self):
+        return self.et_words.union(self.en_words).union(self.teachers)
+
     def __load_stopwords(self, language):
         filename = self.prefix + '\\stopwords_' + language + '.json'
         words = json.loads(open(filename).read())
@@ -28,4 +31,4 @@ class StopWord(object):
 
 if __name__ == '__main__':
     sw = StopWord()
-    print sw.et_words.union(sw.en_words)
+    print sw.get_all_stopwords()

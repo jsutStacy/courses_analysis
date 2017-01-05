@@ -12,7 +12,11 @@ class Html2txt(object):
         self.blacklist = \
             [u'Lahenduste esitamiseks peate olema sisse loginud ja kursusele registreerunud.',
              u'Antud kursusel pole ühtegi ülesannet.',
-             u'Sellele ülesandele ei saa hetkel lahendusi esitada.']
+             u'Sellele ülesandele ei saa hetkel lahendusi esitada.',
+             u'You must be logged in and registered to the course in order to submit solutions.',
+             u'There are no tasks for this course.',
+             u'Solutions to this task cannot be submitted at the moment.'
+             ]
 
     def __convert(self, lecture):
         soup = BeautifulSoup(lecture.content)

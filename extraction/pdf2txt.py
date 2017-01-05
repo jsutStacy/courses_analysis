@@ -4,8 +4,6 @@ from pdfminer.pdfpage import PDFPage
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from db.DataModel import Lecture, db
-from pdfminer.pdftypes import PDFException
-from pdfminer.pdfparser import PDFSyntaxError
 import pathos.multiprocessing as mp
 import peewee
 import os.path
@@ -51,7 +49,7 @@ class Pdf2Txt(object):
                     caching=self.caching, check_extractable=True):
                 page.rotate = (page.rotate + self.rotation) % 360
                 interpreter.process_page(page)
-        except (PDFException, MemoryError, PDFSyntaxError, ValueError) as e:
+        except Exception as e:
             print "Could not extract text {0}".format(e)
 
         fp.close()

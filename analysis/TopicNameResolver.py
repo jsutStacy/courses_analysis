@@ -5,6 +5,7 @@ was found for a topic, a topic name 'General' is assigned instead.
 """
 
 from db.DataModel import db, CourseTopic, CourseTopicInfo
+import string
 
 
 class TopicNameResolver(object):
@@ -65,7 +66,7 @@ class TopicNameResolver(object):
         while not name[0].isalpha():
             name = name[1:len(name)]
 
-        return name.strip().title()
+        return string.capwords(name.strip())
 
 
 if __name__ == '__main__':

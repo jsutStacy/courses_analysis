@@ -16,7 +16,7 @@ class Cleaner(object):
         self.__clean_words_table(LectureWord, infrequent_words)
 
     def clean_stopwords(self):
-        stop_words = set(StopWord().words)
+        stop_words = StopWord().get_all_stopwords()
         self.__clean_words_table(CourseWord, stop_words)
         self.__clean_words_table(LectureWord, stop_words)
         self.__clean_words_table(CorpusWord, stop_words)
