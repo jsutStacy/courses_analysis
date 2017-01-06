@@ -6,7 +6,7 @@ class CoOccurrence(object):
 
     def __init__(self, ngram_range=(2, 4), word_limit = 20, id_limit=3):
         """
-        E.g ngram_range(2,4) specifies that we are only interested in n-grams of size 2 and 4.
+        E.g ngram_range(2,4) specifies that we are only interested in n-grams of size 2 to 4.
 
         word_limit specifies the minimum amount of times a co-occurring word should be present
         over entire corpus.

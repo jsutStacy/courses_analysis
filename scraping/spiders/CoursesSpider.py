@@ -4,6 +4,7 @@ import scrapy
 from scraping.items import CoursesItem
 from scraping.items import DataItem
 from scraping.settings import ALLOWED_EXTENSIONS
+from scraping.SemesterUtils import parse_semesters
 
 
 class CoursesSpider(scrapy.Spider):
@@ -21,7 +22,7 @@ class CoursesSpider(scrapy.Spider):
             The 'semesters' parameter is passed via -a argument """
 
         super(CoursesSpider, self).__init__(*args, **kwargs)
-        self.allowed_semesters = self.__parse_semesters(semesters)
+        self.allowed_semesters = parse_semesters(semesters)
 
     def parse(self, response):
         for sel in response.xpath("//table[@class=\"table previous-years\"]/tr"):
@@ -103,27 +104,6 @@ class CoursesSpider(scrapy.Spider):
         item['semester'] = response.meta['semester']
 
         return item
-
-    @staticmethod
-    def __parse_semesters(semesters_str):
-        semesters = set()
-        for sem in semesters_str.split(","):
-            if len(sem) != 5:
-                print "Invalid parameter length, expected 5, actual: {}".format(len(sem))
-                continue
-
-            season = sem[-1].upper()
-            if season == 'F':
-                season = 'fall'
-            elif season == 'S':
-                season = "spring"
-            else:
-                print "Invalid semester, expected either F or S, actual: {}".format(sem[-1])
-                continue
-
-            semesters.add((sem[:4], season))
-
-        return semesters
 
     @staticmethod
     def __is_valid_url(url):

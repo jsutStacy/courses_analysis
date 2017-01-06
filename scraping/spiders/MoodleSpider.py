@@ -2,8 +2,8 @@
 
 from scraping.items import CoursesItem, DataItem
 from scraping.settings import ALLOWED_EXTENSIONS
+from scraping.SemesterUtils import determine_semester
 import scrapy
-import datetime
 
 
 class MoodleSpider(scrapy.Spider):
@@ -21,13 +21,7 @@ class MoodleSpider(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(MoodleSpider, self).__init__(*args, **kwargs)
-        self.semester = self.__determine_semester()
-
-    @staticmethod
-    def __determine_semester():
-        now = datetime.datetime.now()
-        semester = 'fall' if 1 < now.month < 9 else 'spring'
-        return {'year': str(now.year), 'semester': semester}
+        self.semester = determine_semester()
 
     def parse(self, response):
         request = scrapy.Request(response.url, callback=self.parse_courses)

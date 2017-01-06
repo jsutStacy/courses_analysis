@@ -20,17 +20,21 @@ function usage {
     echo "usage: analyse_courses [[[-s semesters ] [-m]] | [-h]]"
 	echo "	-s, --semesters semesters	comma separated list of semesters to be scraped from courses web page. E.g 2015F,2016S"
 	echo "	-m, --moodle			scrape data from moodle"
+	echo "	-sis, --studyinfosystem			extract study information system data from .csv file"
 	echo "	-h, --help 			display help"
 }
 
 SEMESTERS=
 MOODLE=
+SIS=
 while [ "$1" != "" ]; do
     case $1 in
         -s | --semesters )      shift
                                 SEMESTERS=$1
                                 ;;
         -m | --moodle )    		MOODLE=1
+                                ;;
+        -sis | --studyinfosystem )    		SIS=1
                                 ;;
         -h | --help )           usage
                                 exit
@@ -56,6 +60,13 @@ if [ "$MOODLE" = "1" ]; then
 	run scrape-moodle "Finished scraping data from moodle"
 else
 	echo "Skip scraping data from moodle"
+fi
+
+if [ "$SIS" = "1" ]; then
+	echo "Starting to extract study information system data from file..."
+	run extract-sis "Finished extracting SIS data from file" "SEMESTERS="$SEMESTERS
+else
+	echo "Skip extracting SIS data from file"
 fi
 
 echo "Starting to extract data from downloaded files..."

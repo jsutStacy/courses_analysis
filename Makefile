@@ -21,6 +21,9 @@ scrape-moodle:
 scrape-teachers:
 	scrapy crawl teacher -o teachers.json
 
+extract-sis:
+	python extraction/SisDataLoader.py $(SEMESTERS)
+
 extract:
 	python extraction/TextExtractor.py
 
