@@ -2,6 +2,7 @@ import csv
 from db.DataModel import Lecture, Course, db
 from scraping.SemesterUtils import parse_semesters
 import sys
+import os.path
 
 
 class LectureKey:
@@ -126,4 +127,5 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         semesters = parse_semesters(sys.argv[1])
 
-    SisDataLoader('sis_data.csv', semesters).read_csv()
+    prefix = os.path.dirname(os.path.abspath(__file__))
+    SisDataLoader(prefix + '\\sis_data.csv', semesters).read_csv()

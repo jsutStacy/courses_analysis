@@ -15,12 +15,8 @@ NEWSPIDER_MODULE = 'scraping.spiders'
 DOWNLOAD_TIMEOUT = 180
 
 DOWNLOAD_HANDLERS = {
-    'http': 'scrapy.core.downloader.handlers.http10.HTTP10DownloadHandler',
-    'https': 'scrapy.core.downloader.handlers.http10.HTTP10DownloadHandler',
+    's3': None,
 }
-
-# Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = 'tutorial (+http://www.yourdomain.com)'
 
 ITEM_PIPELINES = {
     'scraping.pipelines.CoursePipeline': 300,
