@@ -26,8 +26,8 @@ class CoursePipeline(object):
 
             if not course.exists():
                 print "course record not found, creating"
-                try:
-                    with db.transaction():
+                with db.atomic():
+                    try:
                         Course.create(
                             code=course_code,
                             name=''.join(item['title']),
@@ -36,8 +36,8 @@ class CoursePipeline(object):
                             url=''.join(item['link']),
                             path='raw_data'.join(item['link'])
                         )
-                except peewee.OperationalError as e:
-                    print "Could not create a record for {} due to {}".format(course_code, e)
+                    except peewee.OperationalError as e:
+                        print "Could not create a record for {} due to {}".format(course_code, e)
 
         return item
 
@@ -77,9 +77,9 @@ class DataPipeline(object):
 
             if not lecture.exists():
                 print "Lecture record not found, creating ..."
-                try:
-                    title = self.__get_title(url)
-                    with db.transaction():
+                title = self.__get_title(url)
+                with db.atomic():
+                    try:
                         Lecture.create(
                             course=course,
                             url=url,
@@ -87,17 +87,17 @@ class DataPipeline(object):
                             name=title,
                             content=content
                         )
-                except peewee.OperationalError as e:
-                    print "Could not create a record for course {} lecture {} due to {}".format(course_code, url, e)
+                    except peewee.OperationalError as e:
+                        print "Could not create a record for course {} lecture {} due to {}".format(course_code, url, e)
             else:
                 if len(content) > 0:
-                    try:
-                        with db.transaction():
+                    with db.atomic():
+                        try:
                             lecture_instance = lecture.first()
                             lecture_instance.content = content
                             lecture_instance.save()
-                    except peewee.OperationalError as e:
-                        print e
+                        except peewee.OperationalError as e:
+                            print e
         return item
 
     @staticmethod

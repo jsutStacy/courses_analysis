@@ -5,7 +5,7 @@ def determine_semester():
     now = datetime.datetime.now()
     semester = 'spring' if 1 < now.month < 9 else 'fall'
     year = now.year - 1 if now.month == 1 else now.year
-    return {'year': year, 'semester': semester}
+    return {'year': str(year), 'semester': semester}
 
 
 def parse_semesters(semesters_str):

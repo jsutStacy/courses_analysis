@@ -18,6 +18,8 @@ DOWNLOAD_HANDLERS = {
     's3': None,
 }
 
+CONCURRENT_REQUESTS = 8
+
 ITEM_PIPELINES = {
     'scraping.pipelines.CoursePipeline': 300,
     'scraping.pipelines.DataPipeline': 400
