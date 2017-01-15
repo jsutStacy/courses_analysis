@@ -31,7 +31,12 @@ class CoOccurrence(object):
             if not doc[1] or (len(doc[1]) == 1 and doc[1][0].count(' ') < 3):
                 continue
 
-            co_occurrences = self.count_model.fit_transform(doc[1])
+            try:
+                co_occurrences = self.count_model.fit_transform(doc[1])
+            except Exception as e:
+                print "Skipping document: {}, due to {}".format(doc[1], e)
+                continue
+
             sum_occ = co_occurrences.sum(axis=0)
             for i, j in zip(self.count_model.get_feature_names(), np.array(sum_occ)[0].tolist()):
                 if i in all_co_occurrences:
