@@ -5,7 +5,7 @@ from sklearn.feature_extraction import DictVectorizer
 from db.DataModel import Course, Lecture, CourseWord, LectureWord, LectureTopic, LectureTopicWord
 from db.DataModel import db, TopicWord, CourseTopic, LDALogLikelihood
 import pathos.multiprocessing as mp
-from TopicNameResolver import TopicNameResolver
+from TopicNameResolver2 import TopicNameResolver2
 
 
 class TopicModeling(object):
@@ -52,7 +52,7 @@ class TopicModeling(object):
             top_word_probs = topic_dist[self.numpy.argsort(topic_dist)][:-self.n_top_words - 1:-1]
 
             for top_word, top_weight in zip(top_topic_words, top_word_probs):
-                row_dict = {'course': lectures[0],
+                row_dict = {'lecture': lectures[i],
                             'topic': i,
                             'word': top_word,
                             'weight': round(top_weight * 100, 2)}
@@ -198,7 +198,7 @@ if __name__ == '__main__':
     topic_model.lda_over_courses()
 
     #Resolve course topic names
-    TopicNameResolver().name_topics()
+    TopicNameResolver2().name_topics()
 
     # Perform LDA over all material in scope of one course
     topic_model.lda_over_lectures()

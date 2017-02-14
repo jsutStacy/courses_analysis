@@ -5,7 +5,7 @@ import sys
 import os.path
 
 
-class LectureKey:
+class LectureKey(object):
     def __init__(self, code, year, semester):
         self.code = code
         self.year = year
@@ -20,7 +20,7 @@ class LectureKey:
     def __ne__(self, other):
         return not(self == other)
 
-    def __repr__(self):
+    def __str__(self):
         return self.code + '-' + self.year + '-' + self.semester
 
 

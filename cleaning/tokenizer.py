@@ -81,8 +81,7 @@ class Tokenizer(object):
                 if len(lem_word) < 3:
                     continue
 
-                if (est_text and lem_word not in self.sw.et_words)\
-                        or (not est_text and lem_word not in self.sw.en_words):
+                if lem_word not in self.sw.lang_words:
                     clean_sentence.append(lem_word)
                     if self.debug:
                         print "{}: {}".format(token.encode('utf-8'), lem_word.encode('utf-8'))
@@ -150,11 +149,6 @@ class Tokenizer(object):
         return est
 
     @staticmethod
-    def __get_lectures(course):
-        lectures = Lecture.select().where(Lecture.course == course)
-        return list(lectures)
-
-    @staticmethod
     def __get_courses(course_id=0):
         if course_id:
             courses = Course.select().where(Course.id == course_id)
@@ -193,11 +187,16 @@ class Tokenizer(object):
     def __replace_acronyms(self, res):
         word_dict = res[1]
         potential_acronyms = res[3]
+        local_def = res[4]
         for acronym in potential_acronyms:
-            if acronym in self.acronyms and acronym in word_dict:  # Legit acronym, replace it
+            if acronym in word_dict:
                 count = word_dict[acronym]
-                del word_dict[acronym]
-                word_dict[self.acronyms[acronym]] = count
+                if acronym in local_def:  # Legit acronym, replace it
+                    del word_dict[acronym]
+                    word_dict[local_def[acronym]] = count
+                elif acronym in self.acronyms:  # Present in global acronym definition
+                    del word_dict[acronym]
+                    word_dict[self.acronyms[acronym]] = count
 
         return res[0], word_dict, res[2]  # lecture, dictionary, clean sentences
 
@@ -242,11 +241,6 @@ class Tokenizer(object):
             rows.append(row_dict)
 
         return rows
-
-    @staticmethod
-    def __get_lecture_words(lecture):
-        lecture_words = list(LectureWord.select().where(LectureWord.lecture == lecture))
-        return lecture_words
 
     @staticmethod
     def create_all_course_tokens(lecture_data):
