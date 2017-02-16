@@ -66,7 +66,7 @@ class TopicNameResolver2(object):
         return "General"
 
     def __find_matching_word(self, topic_courses):
-        top_course_name = topic_courses.pop().course.name.split(' ')
+        top_course_name = topic_courses.pop(0).course.name.split(' ')
         for topic_course in topic_courses:
             words = [word for word in top_course_name if len(word) > 3
                      and word.lower() in topic_course.course.name.lower()]

@@ -19,7 +19,7 @@ class Html2txt(object):
              ]
 
     def __convert(self, lecture):
-        soup = BeautifulSoup(lecture.content)
+        soup = BeautifulSoup(lecture.content, "lxml")
         for tag in soup.find_all(name='div', attrs={'class': 'alert'}):
             if any(sentence in tag.get_text() for sentence in self.blacklist):
                 tag.decompose()

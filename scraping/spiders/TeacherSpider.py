@@ -5,9 +5,10 @@ from scraping.items import TeacherItem
 
 class TeacherSpider(scrapy.Spider):
     name = "teacher"
-    allowed_domains = ["www.cs.ut.ee"]
+    allowed_domains = ["www.cs.ut.ee", "www.math.ut.ee"]
     start_urls = [
-        "http://www.cs.ut.ee/et/instituut/tootajad"
+        "http://www.cs.ut.ee/et/kontakt/arvutiteaduse-instituut",
+        "http://www.math.ut.ee/et/kontakt/matemaatika-statistika-instituut"
     ]
 
     def parse(self, response):

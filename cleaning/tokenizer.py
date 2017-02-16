@@ -161,7 +161,7 @@ class Tokenizer(object):
         result_data = [x for x in (self.pool.map(self.__extract_lecture_tokens, Lecture.select())) if x]
 
         #Create acronym dictionary and replace acronyms with definitions
-        self.acronyms = {k: v for a, b, c, d, e in result_data for k, v in e.iteritems()}
+        self.__create_acronym_dict(result_data)
         result_data = self.pool.map(self.__replace_acronyms, result_data)
 
         # Perform co-occurrence over entire word corpus, filter by course code limit
@@ -183,6 +183,14 @@ class Tokenizer(object):
         # One atomic bulk insert for faster performance
         with db.atomic():
             LectureWord.insert_many([x for y in persistent_tokens for x in y]).execute()
+
+    def __create_acronym_dict(self, res):
+        for a, b, c, d, e in res:
+            for k, v in e.iteritems():
+                if k in self.acronyms:
+                    self.acronyms[k] = k  # Conflict, don't change the acronym, use local dictionary instead
+                else:
+                    self.acronyms[k] = v
 
     def __replace_acronyms(self, res):
         word_dict = res[1]

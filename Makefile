@@ -19,7 +19,8 @@ scrape-moodle:
 	scrapy crawl moodle
 
 scrape-teachers:
-	scrapy crawl teacher -o teachers.json
+	rm -f cleaning/teachers.json
+	scrapy crawl teacher -o cleaning/teachers.json
 
 extract-sis:
 	python extraction/SisDataLoader.py $(SEMESTERS)
