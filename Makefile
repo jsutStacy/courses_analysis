@@ -10,6 +10,7 @@ clean-analysis:
 	rm -rf raw_data
 	rm -rf backup
 	rm -f db/courses.sqlite
+	rm -f cleaning/teachers.json
 	python db/DataModel.py
 
 scrape-courses:
@@ -19,7 +20,6 @@ scrape-moodle:
 	scrapy crawl moodle
 
 scrape-teachers:
-	rm -f cleaning/teachers.json
 	scrapy crawl teacher -o cleaning/teachers.json
 
 extract-sis:

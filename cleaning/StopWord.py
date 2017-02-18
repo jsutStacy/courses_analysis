@@ -20,13 +20,15 @@ class StopWord(object):
         return words
 
     def __get_teacher_names(self):
-        data = open(self.prefix + '\\teachers.json').read()
-        teachers = json.loads(data)
+        path = self.prefix + '\\teachers.json'
 
         names = []
-        for teacher in teachers:
-            for name in teacher['name'].split():
-                names.append(name.lower())
+        if os.path.exists(path):
+            data = open(path).read()
+            teachers = json.loads(data)
+            for teacher in teachers:
+                for name in teacher['name'].split():
+                    names.append(name.lower())
 
         return names
 
