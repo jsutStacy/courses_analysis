@@ -29,7 +29,7 @@ extract:
 	python extraction/TextExtractor.py
 
 tokenize:
-	python cleaning/tokenizer.py
+	python cleaning/Tokenizer.py
 
 analyse:
 	python analysis/TopicModeling.py

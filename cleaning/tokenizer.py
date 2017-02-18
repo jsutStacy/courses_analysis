@@ -115,7 +115,7 @@ class Tokenizer(object):
     @staticmethod
     def __resolve_potential_acronym(sentence, token_idx):
         w = sentence[token_idx]
-        if len(w) > 4 or not w[0].isupper():
+        if len(w) > 4 or not w.isupper():
             return None, None
 
         #Not the first or the final word
