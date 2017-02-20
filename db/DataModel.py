@@ -76,7 +76,7 @@ class LectureTopic(BaseModel):
 
 class LectureTopicWord(BaseModel):
     topic = peewee.IntegerField()
-    lecture = peewee.ForeignKeyField(Lecture)
+    course = peewee.ForeignKeyField(Course)
     word = peewee.CharField()
     weight = peewee.DoubleField()
 

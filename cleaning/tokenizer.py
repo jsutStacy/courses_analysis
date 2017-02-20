@@ -7,6 +7,7 @@ from pyvabamorf import analyze
 from langdetect import detect
 from nltk import download, data, pos_tag
 import pathos.multiprocessing as mp
+import unicodedata
 import time
 import datetime
 import copy
@@ -20,11 +21,13 @@ class Tokenizer(object):
         self.co_occ = CoOccurrence()
         self.co_occurring_words = []
         self.acronyms = {}
+        self.latin_letters = {}
         self.detect_lang = detect
         self.tokenize_sent = sent_tokenize
         self.tokenize_word = word_tokenize
         self.tag_words = pos_tag
         self.lemmatize_est = analyze
+        self.ud = unicodedata
         self.pool = mp.ProcessingPool(8)
 
     def __extract_lecture_tokens(self, lecture):
@@ -102,10 +105,19 @@ class Tokenizer(object):
 
         return lecture, token_dict, clean_sentences, potential_acronyms, acronym_def
 
-    @staticmethod
-    def __is_alpha(token):
+    def __is_latin(self, uchr):
+        try:
+            return self.latin_letters[uchr]
+        except KeyError:
+            return self.latin_letters.setdefault(uchr, 'LATIN' in self.ud.name(uchr, 'A'))
+
+    def __is_alpha(self, token):
+        if not self.__is_latin(token[0]):  # Skip foreign characters(e.g cyrillic)
+            return True, ''
+
         if token.isalpha():
             return False, ''
+
         #Special handling of '-' case
         sym = [i for i, ltr in enumerate(token) if ltr == '-']
         if not sym or not token.replace('-', '').isalpha():

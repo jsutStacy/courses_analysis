@@ -52,7 +52,7 @@ class TopicModeling(object):
             top_word_probs = topic_dist[self.numpy.argsort(topic_dist)][:-self.n_top_words - 1:-1]
 
             for top_word, top_weight in zip(top_topic_words, top_word_probs):
-                row_dict = {'lecture': lectures[i],
+                row_dict = {'course': lecture_data[0],
                             'topic': i,
                             'word': top_word,
                             'weight': round(top_weight * 100, 2)}
@@ -116,7 +116,7 @@ class TopicModeling(object):
             if self.debug:
                 top_word_str = ", ".join([x.encode('utf-8') + "(" + str(round(y * 100, 2)) + "%)"
                                          for x, y in zip(top_topic_words, top_word_probs)])
-                print('Topic {  }: {}'.format(i, top_word_str))
+                print('Topic {}: {}'.format(i, top_word_str))
 
         # Document-topic distributions
         doc_topic = model.doc_topic_
