@@ -5,6 +5,7 @@ from StopWord import StopWord
 from CoOccurrence import CoOccurrence
 from pyvabamorf import analyze
 from langdetect import detect
+from nltk import download, data, pos_tag
 import pathos.multiprocessing as mp
 import time
 import datetime
@@ -22,6 +23,7 @@ class Tokenizer(object):
         self.detect_lang = detect
         self.tokenize_sent = sent_tokenize
         self.tokenize_word = word_tokenize
+        self.tag_words = pos_tag
         self.lemmatize_est = analyze
         self.pool = mp.ProcessingPool(8)
 
@@ -43,11 +45,16 @@ class Tokenizer(object):
         potential_acronyms = set()  # Words that could potentially be acronyms
         acronym_def = {}  # Words that are definitely acronyms, process as definitions
         for sentence in sentences:
-            tokenized_sentence = self.tokenize_word(sentence)
+            tokenized_sentence = self.tokenize_word(sentence.lower())
+            if est_text:  # In case of estonian text, lemmatize sentence immediately to take advantage of POS tagging
+                tagged = self.lemmatize_est(tokenized_sentence)
+            else:  # POS tagged English words, not lemmatized
+                tagged = self.tag_words(tokenized_sentence)
+
             clean_sentence = ['']
             prev_word = ''
             for i in range(len(tokenized_sentence)):
-                token = tokenized_sentence[i].lower()
+                token = tokenized_sentence[i]
 
                 if prev_word:
                     token = prev_word + token
@@ -71,9 +78,9 @@ class Tokenizer(object):
                 else:  # Don't lemmatize acronyms
                     try:
                         if est_text:
-                            lem_word = self.lemmatize_est(token)[0]['analysis'][0]['lemma']
+                            lem_word = tagged[i]['analysis'][0]['lemma']
                         else:
-                            lem_word = self.lemmatizer.lemmatize(token)
+                            lem_word = self.lemmatizer.lemmatize(token, self.to_wordnet(tagged[i][1]))
                     except Exception as e:
                         print e
 
@@ -139,6 +146,17 @@ class Tokenizer(object):
             if all([True if definition[i][0].lower() == w[i] else False for i in range(len(definition))]):
                 return w, ' '.join(definition).lower()
         return w, None
+
+    @staticmethod
+    def to_wordnet(treebank_tag):
+        if treebank_tag.startswith('J'):
+            return 'a'
+        elif treebank_tag.startswith('V'):
+            return 'v'
+        elif treebank_tag.startswith('R'):
+            return 'r'
+        else:
+            return 'n'
 
     def __is_estonian(self, text):
         est = False
@@ -336,9 +354,11 @@ if __name__ == '__main__':
     tok = Tokenizer()
     # tok.debug = True
 
-    # Download first time
-    # from nltk import download
-    #download('punkt')
+    try:
+        data.find('tokenizers/punkt')
+    except LookupError:
+        download('punkt')  # Download first time
+        download('maxent_treebank_pos_tagger')
 
     print "Extracting all lecture tokens"
     lec_data = measure_time(tok.extract_all_lectures_tokens, "Extracted lecture tokens")

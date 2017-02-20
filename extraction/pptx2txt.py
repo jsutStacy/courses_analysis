@@ -14,7 +14,7 @@ class Pptx2Txt(object):
         path = self.prefix+lecture.path
         if not os.path.exists(path):
             print "File not found: {0}".format(path)
-            return
+            return None
         print lecture.url
 
         ret_val = ''

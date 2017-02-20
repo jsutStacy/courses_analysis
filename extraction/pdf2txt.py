@@ -5,62 +5,43 @@ from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from db.DataModel import Lecture, db
 import pathos.multiprocessing as mp
+import multiprocessing
 import peewee
 import os.path
 
 
 class Pdf2Txt(object):
-    def __init__(self, prefix, process_count=8):
+    def __init__(self, prefix, process_count=multiprocessing.cpu_count()*2):
         self.prefix = prefix
-        self.caching = True
-        self.codec = 'utf-8'
-        self.laparams = LAParams()
-        self.imagewriter = None
-        self.pagenos = set()
-        self.maxpages = 0
-        self.password = ''
-        self.rotation = 0
         self.pool = mp.ProcessingPool(process_count)
+        print "Process count in pool: {} ".format(process_count)
 
-    def __convert(self, lecture, ofile=None):
+    def __convert(self, lecture):
         path = self.prefix + lecture.path
         if not os.path.exists(path):
-            print "File not found: {0}".format(path)
-            return
+            print "File not found: {}".format(path)
+            return None
         print lecture.url
 
-        fp = file(path, 'rb')
+        input_file = file(path, 'rb')
+        output = StringIO.StringIO()
 
-        if ofile is None:
-            outfp = StringIO.StringIO()
-        else:
-            outfp = file(ofile, 'wb')
-
-        rsrcmgr = PDFResourceManager(caching=self.caching)
-        device = TextConverter(rsrcmgr, outfp, codec=self.codec, laparams=self.laparams,
-                               imagewriter=self.imagewriter)
+        rsrcmgr = PDFResourceManager()
+        device = TextConverter(rsrcmgr, output, codec='utf-8', laparams=LAParams())
 
         interpreter = PDFPageInterpreter(rsrcmgr, device)
 
         try:
-            for page in PDFPage.get_pages(
-                    fp, self.pagenos,
-                    maxpages=self.maxpages, password=self.password,
-                    caching=self.caching, check_extractable=True):
-                page.rotate = (page.rotate + self.rotation) % 360
+            for page in PDFPage.get_pages(input_file):
                 interpreter.process_page(page)
         except Exception as e:
-            print "Could not extract text {0}".format(e)
+            print "Could not extract text {}".format(e)
 
-        fp.close()
+        input_file.close()
         device.close()
-        retval = None
-        if ofile is None:
-            retval = outfp.getvalue()
+        lecture.content = output.getvalue()
+        output.close()
 
-        outfp.close()
-
-        lecture.content = retval
         return lecture
 
     def extract_text(self):
@@ -68,6 +49,7 @@ class Pdf2Txt(object):
 
         result_lectures = self.pool.map(self.__convert, lectures)
 
+        print "PDF extraction complete, processed {} entries".format(len(result_lectures))
         for lecture in result_lectures:
             if lecture:
                 try:
