@@ -2,7 +2,8 @@ import numpy as np
 import lda
 import lda.datasets
 from sklearn.feature_extraction import DictVectorizer
-from db.DataModel import Course, Lecture, CourseWord, LectureWord, LectureTopic, LectureTopicWord
+from db.DataModel import Course, Lecture, CourseWord, LectureWord, LectureTopic, LectureTopicWord, \
+    MaterialTopic, MaterialTopicWord
 from db.DataModel import db, TopicWord, CourseTopic, LDALogLikelihood
 import pathos.multiprocessing as mp
 from TopicNameResolver2 import TopicNameResolver2
@@ -17,6 +18,11 @@ class TopicModeling(object):
         self.numpy = np
 
     def lda_over_lectures(self):
+        """
+        Peform LDA over lectures within the scope of an individual course.
+        Basically we perform as many LDA modellings as there are courses.
+        """
+
         lectures = []
         for course in Course.select():
             course_lectures = list(Lecture.select().where(Lecture.course == course))
@@ -84,7 +90,70 @@ class TopicModeling(object):
 
         return lec_topic_words_rows, lec_topic_rows
 
+    def lda_over_all_material(self):
+        """
+        Perform LDA over all material without any course limitations. The topic count is 1/10 of the material count.
+        """
+
+        lectures = Lecture.select()
+        lectures_dict = []
+        for lecture in lectures:
+            lecture_words = LectureWord.select().where(LectureWord.lecture == lecture)
+            lectures_dict.append(dict([(x.word, x.count) for x in lecture_words]))
+
+        topic_count = int(len(lectures_dict) / 10)
+
+        print "Performing LDA over all material.."
+        model, vocab = self.__perform_lda_default(lectures_dict, topic_count)
+
+        topic_word_rows = []
+        # Iterate over topic word distributions
+        for i, topic_dist in enumerate(model.topic_word_):
+            top_topic_words = np.array(vocab)[self.__max_values(topic_dist, self.n_top_words)]
+            top_word_probs = topic_dist[np.argsort(topic_dist)][:-self.n_top_words - 1:-1]
+
+            for top_word, top_weight in zip(top_topic_words, top_word_probs):
+                row_dict = {'topic': i,
+                            'word': top_word,
+                            'weight': round(top_weight * 100, 2)}
+                topic_word_rows.append(row_dict)
+
+            if self.debug:
+                top_word_str = ", ".join([x.encode('utf-8') + "(" + str(round(y * 100, 2)) + "%)"
+                                         for x, y in zip(top_topic_words, top_word_probs)])
+                print('Topic {}: {}'.format(i, top_word_str))
+
+        # Document-topic distributions
+        doc_topic = model.doc_topic_
+        lecture_topic_rows = []
+        for i in range(lectures.count()):
+            top_topics = np.argsort(doc_topic[i])[:-self.n_top_topic - 1:-1]
+            topic_probs = doc_topic[i][top_topics]
+
+            for top_topic, top_weight in zip(top_topics, topic_probs):
+                rounded_weight = round(top_weight * 100, 2)
+                if rounded_weight < 10:
+                    continue
+                row_dict = {'lecture': lectures[i],
+                            'topic': top_topic,
+                            'weight': rounded_weight}
+                lecture_topic_rows.append(row_dict)
+
+            if self.debug:
+                doc_topic_str = ", ".join(
+                    [str(x) + "(" + str(round(y * 100, 2)) + "%)" for x, y in zip(top_topics, topic_probs)])
+                print("{} (top {} topics: {})".format(lectures[i].name.encode('utf-8'),
+                                                      self.n_top_topic, doc_topic_str))
+
+        with db.atomic():
+            MaterialTopicWord.insert_many(topic_word_rows).execute()
+            MaterialTopic.insert_many(lecture_topic_rows).execute()
+
     def lda_over_courses(self):
+        """
+        Perform LDA over all courses, no material/lecture level details.
+        """
+
         courses = Course.select()
         courses_size = Course.select(Course.code).distinct().count()
         courses_dict = []
@@ -199,6 +268,9 @@ if __name__ == '__main__':
 
     #Resolve course topic names
     TopicNameResolver2().name_topics()
+
+    # Perform LDA over all material
+    topic_model.lda_over_all_material()
 
     # Perform LDA over all material in scope of one course
     topic_model.lda_over_lectures()

@@ -81,6 +81,18 @@ class LectureTopicWord(BaseModel):
     weight = peewee.DoubleField()
 
 
+class MaterialTopicWord(BaseModel):
+    topic = peewee.IntegerField()
+    word = peewee.CharField()
+    weight = peewee.DoubleField()
+
+
+class MaterialTopic(BaseModel):
+    lecture = peewee.ForeignKeyField(Lecture)
+    topic = peewee.IntegerField()
+    weight = peewee.DoubleField()
+
+
 if __name__ == '__main__':
     db.create_tables([Course, Lecture, CourseWord, LectureWord, CorpusWord, TopicWord, CourseTopic, LDALogLikelihood,
-                      LectureTopic, LectureTopicWord, CourseTopicInfo], safe=True)
+                      LectureTopic, LectureTopicWord, CourseTopicInfo, MaterialTopic, MaterialTopicWord], safe=True)
