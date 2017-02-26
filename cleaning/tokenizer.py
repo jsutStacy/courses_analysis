@@ -142,8 +142,9 @@ class Tokenizer(object):
     @staticmethod
     def __resolve_potential_acronym(sentence, token_idx):
         w = sentence[token_idx]
-        if len(w) > 4 or not w.isupper() or not (w[0].islower() and w[1:].isupper()) \
-                or not(w[-1:].islower() and w[:-1].isupper()):
+
+        if len(w) > 4 or not (w.isupper() or (w[0].islower() and w[1:].isupper())
+                              or (w[-1:].islower() and w[:-1].isupper())):
             return None, None
 
         #Not the first or the final word
@@ -228,7 +229,7 @@ class Tokenizer(object):
     def __create_acronym_dict(self, res):
         for a, b, c, d, e in res:
             for k, v in e.iteritems():
-                if k in self.acronyms:
+                if k in self.acronyms and self.acronyms[k] != v:
                     self.acronyms[k] = k  # Conflict, don't change the acronym, use local dictionary instead
                 else:
                     self.acronyms[k] = v
