@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import scrapy
+
 from scraping.items import CoursesItem, DataItem
 from scraping.settings import ALLOWED_EXTENSIONS
-from scraping.SemesterUtils import determine_semester
-import scrapy
+from utils.SemesterUtils import determine_semester
+from utils.ConfigReader import Config
 
 
 class MoodleSpider(scrapy.Spider):
     #Overridden params
     name = "moodle"
-    allowed_domains = ["moodle.ut.ee"]
-    start_urls = ["https://moodle.ut.ee/course/index.php?categoryid=142"]
+    allowed_domains = []
+    start_urls = []
 
     #Custom params
     filter_url = "https://moodle.ut.ee"
@@ -21,6 +23,9 @@ class MoodleSpider(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(MoodleSpider, self).__init__(*args, **kwargs)
+        moodle_info = Config().get_moodle_info()
+        self.allowed_domains = moodle_info.get("allowed_domains")
+        self.start_urls = moodle_info.get("start_urls")
         self.semester = determine_semester()
 
     def parse(self, response):

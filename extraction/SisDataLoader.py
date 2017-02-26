@@ -1,8 +1,10 @@
 import csv
-from db.DataModel import Lecture, Course, db
-from scraping.SemesterUtils import parse_semesters
 import sys
 import os.path
+
+from db.DataModel import Lecture, Course, db
+from utils.SemesterUtils import parse_semesters
+from utils.ConfigReader import Config
 
 
 class LectureKey(object):
@@ -29,7 +31,11 @@ class SisDataLoader(object):
     def __init__(self, filename, allowed_semesters):
         self.filename = filename
         self.col_names = {}
-        self.allowed_semesters = allowed_semesters
+
+        if allowed_semesters:
+            self.allowed_semesters = allowed_semesters
+        else:
+            self.allowed_semesters = Config().get_allowed_semesters()
 
     def read_csv(self):
         result = {}

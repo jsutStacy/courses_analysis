@@ -9,5 +9,6 @@ setup(
     package_data = {
         'cleaning': ['*.json'],
         'db': ['*.sqlite'],
+        'utils': ['*.cfg'],
     },
 )

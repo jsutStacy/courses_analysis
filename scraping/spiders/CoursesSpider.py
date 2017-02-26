@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import scrapy
+
 from scraping.items import CoursesItem
 from scraping.items import DataItem
 from scraping.settings import ALLOWED_EXTENSIONS
-from scraping.SemesterUtils import parse_semesters
+from utils.SemesterUtils import parse_semesters
+from utils.ConfigReader import Config
 
 
 class CoursesSpider(scrapy.Spider):
     #Overridden params
     name = "courses"
-    allowed_domains = ["courses.cs.ut.ee", "courses.ms.ut.ee"]
-    start_urls = ["https://courses.cs.ut.ee/user/lang/en?userlang=en&redirect=%2Fcourses%2Fold",
-                  "http://courses.ms.ut.ee/user/lang/en?userlang=en&redirect=%2Fcourses%2Fold"]
+    allowed_domains = []
+    start_urls = []
 
     #Custom params
     allowed_semesters = []
@@ -22,7 +23,16 @@ class CoursesSpider(scrapy.Spider):
             The 'semesters' parameter is passed via -a argument """
 
         super(CoursesSpider, self).__init__(*args, **kwargs)
-        self.allowed_semesters = parse_semesters(semesters)
+        cfg = Config()
+        course_info = cfg.get_courses_info()
+        self.allowed_domains = course_info.get("allowed_domains")
+        self.start_urls = course_info.get("start_urls")
+
+        # Commandline parameters override file parameters
+        if semesters:
+            self.allowed_semesters = parse_semesters(semesters)
+        else:
+            self.allowed_semesters = cfg.get_allowed_semesters()
 
     def parse(self, response):
         for sel in response.xpath("//table[@class=\"table previous-years\"]/tr"):
