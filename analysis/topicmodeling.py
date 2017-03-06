@@ -266,11 +266,12 @@ if __name__ == '__main__':
     # Perform LDA over all courses
     topic_model.lda_over_courses()
 
-    #Resolve course topic names
-    TopicNameResolver2().name_topics()
-
     # Perform LDA over all material
     topic_model.lda_over_all_material()
 
     # Perform LDA over all material in scope of one course
     topic_model.lda_over_lectures()
+
+    #Resolve topic names where possible
+    TopicNameResolver2().name_topics()
+

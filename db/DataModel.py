@@ -93,6 +93,12 @@ class MaterialTopic(BaseModel):
     weight = peewee.DoubleField()
 
 
+class MaterialTopicInfo(BaseModel):
+    topic = peewee.IntegerField()
+    name = peewee.CharField()
+
+
 if __name__ == '__main__':
     db.create_tables([Course, Lecture, CourseWord, LectureWord, CorpusWord, TopicWord, CourseTopic, LDALogLikelihood,
-                      LectureTopic, LectureTopicWord, CourseTopicInfo, MaterialTopic, MaterialTopicWord], safe=True)
+                      LectureTopic, LectureTopicWord, CourseTopicInfo, MaterialTopic, MaterialTopicWord,
+                      MaterialTopicInfo], safe=True)
