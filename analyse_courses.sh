@@ -22,6 +22,7 @@ function usage {
 	echo "	-m, --moodle			scrape data from moodle"
 	echo "	-t, --teachers			scrape teacher names to exclude them from analysis"
 	echo "	-sis, --studyinfosystem			extract study information system data from .csv file"
+	echo "	-tdir, --targetdirectory			directory where the resulting DB file will be copied"
 	echo "	-h, --help 			display help"
 }
 
@@ -29,11 +30,15 @@ SEMESTERS=
 MOODLE=
 SIS=
 TEACHERS=
+TARGET_DIR=
 while [ "$1" != "" ]; do
     case $1 in
         -s | --semesters )      shift
                                 SEMESTERS=$1
                                 ;;
+		-tdir | --targetdirectory )	     shift
+								TARGET_DIR=$1
+								;;
         -m | --moodle )    		MOODLE=1
                                 ;;
         -t | --teachers )    		TEACHERS=1
@@ -88,3 +93,8 @@ run tokenize "Finished tokenizing"
 
 echo "Performing LDA analysis"
 run analyse "Finished analysing data"
+
+if [ "$TARGET_DIR" != "" ]; then
+	echo "Copying database file to target directory..."
+	cp -rf db/courses.sqlite $TARGET_DIR
+fi
