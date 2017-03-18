@@ -270,7 +270,7 @@ if __name__ == '__main__':
     topic_model.lda_over_all_material()
 
     # Perform LDA over all material in scope of one course
-    topic_model.lda_over_lectures()
+    #topic_model.lda_over_lectures() -- currently left out, since it is not that informative
 
     #Resolve topic names where possible
     TopicNameResolver2().name_topics()
