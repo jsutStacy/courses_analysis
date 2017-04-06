@@ -55,7 +55,7 @@ def __resolve_extension(word):
     return res
 
 if __name__ == '__main__':
-    prefix = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '\\'
+    prefix = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/'
 
     process_count = 8
     if len(sys.argv) == 2:
