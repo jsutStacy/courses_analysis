@@ -2,7 +2,7 @@ import peewee
 import os
 
 DB_DIR = os.path.dirname(os.path.abspath(__file__))
-db_name = DB_DIR + '\\courses.sqlite'
+db_name = DB_DIR + '/courses.sqlite'
 db = peewee.SqliteDatabase(db_name)
 
 

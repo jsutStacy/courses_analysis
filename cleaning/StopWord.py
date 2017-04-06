@@ -15,12 +15,12 @@ class StopWord(object):
         return self.lang_words
 
     def __load_stopwords(self, language):
-        filename = self.prefix + '\\stopwords_' + language + '.json'
+        filename = self.prefix + '/stopwords_' + language + '.json'
         words = json.loads(open(filename).read())
         return words
 
     def __get_teacher_names(self):
-        path = self.prefix + '\\teachers.json'
+        path = self.prefix + '/teachers.json'
 
         names = []
         if os.path.exists(path):

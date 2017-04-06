@@ -134,4 +134,4 @@ if __name__ == '__main__':
         semesters = parse_semesters(sys.argv[1])
 
     prefix = os.path.dirname(os.path.abspath(__file__))
-    SisDataLoader(prefix + '\\sis_data.csv', semesters).read_csv()
+    SisDataLoader(prefix + '/sis_data.csv', semesters).read_csv()

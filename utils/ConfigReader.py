@@ -5,7 +5,7 @@ from SemesterUtils import parse_semesters
 
 class Config(object):
     def __init__(self):
-        self.path = os.path.dirname(os.path.abspath(__file__)) + '\\config.cfg'
+        self.path = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
         self.config = ConfigParser.ConfigParser()
         self.config.read(self.path)
 

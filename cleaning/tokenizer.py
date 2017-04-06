@@ -209,7 +209,7 @@ class Tokenizer(object):
         # Perform co-occurrence over entire word corpus, filter by course code limit
         docs = [(y[0].course.code, y[2]) for y in result_data]
         self.co_occurring_words = self.co_occ.find_co_occurring_words(docs, self.acronyms)
-        print self.co_occurring_words
+        print "Co-occurring words:", self.co_occurring_words, "; total count:", len(self.co_occurring_words)
         # Re-count co-occurring words and remove 'standalone' words
         return self.pool.map(self.__adjust_lecture_counts, result_data)
 
@@ -233,7 +233,7 @@ class Tokenizer(object):
                     self.acronyms[k] = k  # Conflict, don't change the acronym, use local dictionary instead
                 else:
                     self.acronyms[k] = v
-        print self.acronyms  # Global acronyms
+        print "Acronyms:", self.acronyms, "; total count:", len(self.acronyms)  # Global acronyms
 
     def __replace_acronyms(self, res):
         word_dict = res[1]
