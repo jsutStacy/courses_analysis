@@ -383,7 +383,15 @@ if __name__ == '__main__':
         data.find('tokenizers/punkt')
     except LookupError:
         download('punkt')  # Download first time
+
+    try:
+        data.find('taggers/maxent_treebank_pos_tagger')
+    except LookupError:
         download('maxent_treebank_pos_tagger')
+
+    try:
+        data.find('taggers/averaged_perceptron_tagger')
+    except LookupError:
         download('averaged_perceptron_tagger')
 
     print "Extracting all lecture tokens"
