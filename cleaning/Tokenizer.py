@@ -375,24 +375,21 @@ def measure_time(function, task_str, *args):
     finally:
         print '{} in {}'.format(task_str, str(datetime.timedelta(seconds=time.clock()-start)))
 
+
+def resolve_package(package_dir, package_name):
+    try:
+        data.find(package_dir + '/' + package_name)
+    except LookupError:
+        download(package_name)  # Download first time
+
 if __name__ == '__main__':
     tok = Tokenizer()
     # tok.debug = True
 
-    try:
-        data.find('tokenizers/punkt')
-    except LookupError:
-        download('punkt')  # Download first time
-
-    try:
-        data.find('taggers/maxent_treebank_pos_tagger')
-    except LookupError:
-        download('maxent_treebank_pos_tagger')
-
-    try:
-        data.find('taggers/averaged_perceptron_tagger')
-    except LookupError:
-        download('averaged_perceptron_tagger')
+    resolve_package('tokenizers', 'punkt')
+    resolve_package('taggers', 'maxent_treebank_pos_tagger')
+    resolve_package('taggers', 'averaged_perceptron_tagger')
+    resolve_package('corpora', 'wordnet')
 
     print "Extracting all lecture tokens"
     lec_data = measure_time(tok.extract_all_lectures_tokens, "Extracted lecture tokens")
