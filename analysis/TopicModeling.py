@@ -146,8 +146,14 @@ class TopicModeling(object):
                                                       self.n_top_topic, doc_topic_str))
 
         with db.atomic():
-            MaterialTopicWord.insert_many(topic_word_rows).execute()
-            MaterialTopic.insert_many(lecture_topic_rows).execute()
+            for idx in range(0, len(topic_word_rows), 500):
+                MaterialTopicWord.insert_many(topic_word_rows[idx:(len(topic_word_rows)
+                                                                   if idx+500 > len(topic_word_rows)
+                                                                   else idx+500)]).execute()
+            for idx in range(0, len(lecture_topic_rows), 500):
+                MaterialTopic.insert_many(lecture_topic_rows[idx:(len(lecture_topic_rows)
+                                                                  if idx+500 > len(lecture_topic_rows)
+                                                                  else idx+500)]).execute()
 
     def lda_over_courses(self):
         """
@@ -207,9 +213,18 @@ class TopicModeling(object):
                                                       self.n_top_topic, doc_topic_str))
 
         with db.atomic():
-            LDALogLikelihood.insert_many(log_likelihoods).execute()
-            TopicWord.insert_many(topic_word_rows).execute()
-            CourseTopic.insert_many(course_topic_rows).execute()
+            for idx in range(0, len(log_likelihoods), 500):
+                LDALogLikelihood.insert_many(log_likelihoods[idx:(len(log_likelihoods)
+                                                                  if idx+500 > len(log_likelihoods)
+                                                                  else idx+500)]).execute()
+            for idx in range(0, len(topic_word_rows), 500):
+                TopicWord.insert_many(topic_word_rows[idx:(len(topic_word_rows)
+                                                           if idx+500 > len(topic_word_rows)
+                                                           else idx+500)]).execute()
+            for idx in range(0, len(course_topic_rows), 500):
+                CourseTopic.insert_many(course_topic_rows[idx:(len(course_topic_rows)
+                                                               if idx+500 > len(course_topic_rows)
+                                                               else idx+500)]).execute()
 
     @staticmethod
     def __max_values(arr, top):

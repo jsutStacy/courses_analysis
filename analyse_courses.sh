@@ -17,7 +17,7 @@ function run {
 }
 
 function usage {
-    echo "usage: analyse_courses [[[-s semesters ] [-m]] | [-h]]"
+    echo "usage: analyse_courses [[[-s semesters ] [-sis] [-t] [-tdir] [-m]] | [-h]]"
 	echo "	-s, --semesters semesters	comma separated list of semesters to be scraped from courses web page. E.g 2015F,2016S"
 	echo "	-m, --moodle			scrape data from moodle"
 	echo "	-t, --teachers			scrape teacher names to exclude them from analysis"

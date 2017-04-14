@@ -223,8 +223,10 @@ class Tokenizer(object):
         persistent_tokens = [self.__compose_lecture_rows(entry) for entry in lecture_data]
 
         # One atomic bulk insert for faster performance
+        res = [x for y in persistent_tokens for x in y]
         with db.atomic():
-            LectureWord.insert_many([x for y in persistent_tokens for x in y]).execute()
+            for idx in range(0, len(res), 500):
+                LectureWord.insert_many(res[idx:(len(res) if idx+500 > len(res) else idx+500)]).execute()
 
     def __create_acronym_dict(self, res):
         for a, b, c, d, e in res:
@@ -317,8 +319,10 @@ class Tokenizer(object):
 
         result_courses = [self.__compose_course_rows(entry) for entry in courses_data.items()]
 
+        res = [x for y in result_courses for x in y]
         with db.atomic():
-            CourseWord.insert_many([x for y in result_courses for x in y]).execute()
+            for idx in range(0, len(res), 500):
+                CourseWord.insert_many(res[idx:(len(res) if idx+500 > len(res) else idx+500)]).execute()
 
     @staticmethod
     def __compose_course_rows(entry):
@@ -358,7 +362,9 @@ class Tokenizer(object):
         result_corpus = [self.__compose_corpus_rows(item) for item in corpus_dict.items()]
 
         with db.atomic():
-            CorpusWord.insert_many(result_corpus).execute()
+            for idx in range(0, len(result_corpus), 500):
+                CorpusWord.insert_many(result_corpus[idx:(len(result_corpus) if idx+500 > len(result_corpus)
+                                                          else idx+500)]).execute()
 
         return rem_words
 
