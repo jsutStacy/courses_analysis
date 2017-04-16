@@ -26,6 +26,8 @@ class Lecture(BaseModel):
     path = peewee.CharField()
     name = peewee.CharField()
     content = peewee.TextField()
+    time = peewee.DateTimeField(null=True)
+    size = peewee.DoubleField()
 
 
 class LectureWord(BaseModel):
@@ -99,6 +101,15 @@ class MaterialTopicInfo(BaseModel):
 
 
 if __name__ == '__main__':
-    db.create_tables([Course, Lecture, CourseWord, LectureWord, CorpusWord, TopicWord, CourseTopic, LDALogLikelihood,
+    support_tables = [CourseWord, LectureWord, CorpusWord, TopicWord, CourseTopic, LDALogLikelihood,
                       LectureTopic, LectureTopicWord, CourseTopicInfo, MaterialTopic, MaterialTopicWord,
-                      MaterialTopicInfo], safe=True)
+                      MaterialTopicInfo]
+    main_tables = [Course, Lecture]
+    if 'lecture' in db.get_tables():
+        with db.atomic():
+            for table in support_tables:
+                table.delete().execute()
+            Lecture.update(time=None).execute()
+    else:
+        db.create_tables(main_tables, safe=True)
+        db.create_tables(support_tables, safe=True)

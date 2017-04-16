@@ -107,7 +107,7 @@ class CoursesSpider(scrapy.Spider):
 
         item = DataItem()
         item['link'] = link
-        item['path'] = '/' + ''.join(response.url).replace(response.meta['filter'], '') if not content else ''
+        item['path'] = ''.join(response.url).replace(response.meta['filter'], '') if not content else ''
         item['content'] = content
         item['course_code'] = course['code']
         item['year'] = response.meta['year']

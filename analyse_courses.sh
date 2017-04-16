@@ -17,12 +17,13 @@ function run {
 }
 
 function usage {
-    echo "usage: analyse_courses [[[-s semesters ] [-sis] [-t] [-tdir] [-m]] | [-h]]"
+    echo "usage: analyse_courses [[[-s semesters ] [-sis] [-t] [-tdir] [-m] [-fc]] | [-h]]"
 	echo "	-s, --semesters semesters	comma separated list of semesters to be scraped from courses web page. E.g 2015F,2016S"
 	echo "	-m, --moodle			scrape data from moodle"
 	echo "	-t, --teachers			scrape teacher names to exclude them from analysis"
 	echo "	-sis, --studyinfosystem			extract study information system data from .csv file"
 	echo "	-tdir, --targetdirectory			directory where the resulting DB file will be copied"
+	echo "	-fc, --fullclean			remove all existing data and db entries, re-download everything instead of just updating the missing parts"
 	echo "	-h, --help 			display help"
 }
 
@@ -31,6 +32,7 @@ MOODLE=
 SIS=
 TEACHERS=
 TARGET_DIR=
+FULL_CLEAN=
 while [ "$1" != "" ]; do
     case $1 in
         -s | --semesters )      shift
@@ -45,6 +47,8 @@ while [ "$1" != "" ]; do
                                 ;;								
         -sis | --studyinfosystem )    		SIS=1
                                 ;;
+        -fc | --fullclean )    		FULL_CLEAN=1
+                                ;;
         -h | --help )           usage
                                 exit
                                 ;;
@@ -54,8 +58,13 @@ while [ "$1" != "" ]; do
     shift
 done
 
-echo "Cleaning previous data..."
-make clean-analysis
+if [ "$FULL_CLEAN" = "1" ]; then
+	echo "Removing all previous data..."
+	make clean-analysis "fc=1"
+else
+	echo "Removing current results..."
+	make clean-analysis "fc=0"
+fi
 
 if [ "$SEMESTERS" != "" ]; then
 	echo "Starting to scrape data from courses..."
@@ -64,18 +73,23 @@ else
 	echo "Skip scraping data from courses"
 fi
 
-if [ "$TEACHERS" = "1" ]; then
-	echo "Starting to scrape teacher names..."
-	run scrape-teachers "Finished scraping teacher names"
-else
-	echo "Skip scraping teacher names"
-fi
-
 if [ "$MOODLE" = "1" ]; then
 	echo "Starting to scrape data from moodle..."
 	run scrape-moodle "Finished scraping data from moodle"
 else
 	echo "Skip scraping data from moodle"
+fi
+
+if [ "$FULL_CLEAN" = "" ] && [ "$SEMESTERS" != "" ]; then
+    echo "Removing stale data..."
+    make clean-stale "SEMESTERS="$SEMESTERS
+fi
+
+if [ "$TEACHERS" = "1" ]; then
+	echo "Starting to scrape teacher names..."
+	run scrape-teachers "Finished scraping teacher names"
+else
+	echo "Skip scraping teacher names"
 fi
 
 if [ "$SIS" = "1" ]; then

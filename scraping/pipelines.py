@@ -12,6 +12,7 @@ import urllib
 from db.DataModel import Course, Lecture, db
 from scraping.settings import ALLOWED_EXTENSIONS
 import peewee
+import datetime
 
 
 class CoursePipeline(object):
@@ -52,6 +53,7 @@ class DataPipeline(object):
             path = ''
             year = ''.join(item['year'])
             semester = ''.join(item['semester'])
+            prefix = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/'
 
             course = Course.select().where(Course.code == course_code, Course.year == year, Course.semester == semester)
             if not course.exists():
@@ -65,15 +67,24 @@ class DataPipeline(object):
                     print "Could not create directory: {} due to {}".format(dir_name, e)
 
             lecture = Lecture.select().where(Lecture.course == course, Lecture.url == url)
+            file_size = 0
             # if no lecture record and no content, then download data (pdf, pptx, etc.) according to url
-            if not lecture.exists() and len(content) == 0:
-                filename = os.path.basename(url)
-                path = dir_name + filename
-                print "Saving {} => {}".format(url, path)
+            if len(content) == 0:
                 try:
-                    urllib.urlretrieve(url, path)
-                except IOError as e:
-                    print "Could not save file: {} into {}. Cause {}".format(url, path, e)
+                    info = urllib.urlopen(url).info()
+                    if 'Content-Length' in info:
+                        file_size = float(info['Content-Length'])
+                except Exception as e:
+                    print "Failed to retrieve file size for {} due to {}".format(url, e)
+                if not lecture.exists():
+                    path = self.__download(url, dir_name)
+                else:
+                    lecture_instance = lecture.first()
+
+                    # Re-download only if the file has been updated
+                    if lecture_instance.size == 0 or lecture_instance.size != file_size:
+                        os.remove(prefix + lecture_instance.path)
+                        self.__download(url, dir_name)
 
             if not lecture.exists():
                 print "Lecture record not found, creating ..."
@@ -85,20 +96,33 @@ class DataPipeline(object):
                             url=url,
                             path=path,
                             name=title,
-                            content=content
+                            content=content,
+                            size=file_size,
+                            time=datetime.datetime.now()
                         )
                     except peewee.OperationalError as e:
                         print "Could not create a record for course {} lecture {} due to {}".format(course_code, url, e)
             else:
-                if len(content) > 0:
-                    with db.atomic():
-                        try:
-                            lecture_instance = lecture.first()
-                            lecture_instance.content = content
-                            lecture_instance.save()
-                        except peewee.OperationalError as e:
-                            print e
+                with db.atomic():
+                    try:
+                        lecture_instance = lecture.first()
+                        lecture_instance.content = content
+                        lecture_instance.time = datetime.datetime.now()
+                        lecture_instance.save()
+                    except peewee.OperationalError as e:
+                        print e
         return item
+
+    @staticmethod
+    def __download(url, dir_name):
+        filename = os.path.basename(url)
+        path = dir_name + filename
+        print "Saving {} => {}".format(url, path)
+        try:
+            urllib.urlretrieve(url, path)
+        except IOError as e:
+            print "Could not save file: {} into {}. Cause {}".format(url, path, e)
+        return path
 
     @staticmethod
     def __get_title(url):

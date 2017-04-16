@@ -6,6 +6,7 @@ from scraping.items import CoursesItem, DataItem
 from scraping.settings import ALLOWED_EXTENSIONS
 from utils.SemesterUtils import determine_semester
 from utils.ConfigReader import Config
+from scrapy.http import TextResponse
 
 
 class MoodleSpider(scrapy.Spider):
@@ -81,6 +82,9 @@ class MoodleSpider(scrapy.Spider):
                     yield request
 
     def parse_course_link(self, response):
+        if not isinstance(response, TextResponse):
+            return
+
         for sel in response.xpath("//div[@role=\"main\"]"):
             for sel_link in sel.xpath("//a"):
                 link = self.__extract_link(sel_link)

@@ -1,6 +1,7 @@
 import csv
 import sys
 import os.path
+import datetime
 
 from db.DataModel import Lecture, Course, db
 from utils.SemesterUtils import parse_semesters
@@ -101,7 +102,9 @@ class SisDataLoader(object):
                         'url': '',
                         'path': self.filename,
                         'name': 'SISdata',
-                        'content': v.decode('latin-1').encode('utf-8')
+                        'content': v.decode('latin-1').encode('utf-8'),
+                        'time': datetime.datetime.now(),
+                        'size': 0
                          })
 
         with db.atomic():
