@@ -85,6 +85,8 @@ class DataPipeline(object):
                     if lecture_instance.size == 0 or lecture_instance.size != file_size:
                         os.remove(prefix + lecture_instance.path)
                         self.__download(url, dir_name)
+                    else:
+                        content = lecture_instance.content  # No need to re-extract content later
 
             if not lecture.exists():
                 print "Lecture record not found, creating ..."
