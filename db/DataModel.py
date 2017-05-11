@@ -52,6 +52,7 @@ class TopicWord(BaseModel):
     topic = peewee.IntegerField()
     word = peewee.CharField()
     weight = peewee.DoubleField()
+    type = peewee.IntegerField()
 
 
 class CourseTopic(BaseModel):

@@ -1,11 +1,11 @@
 import numpy as np
 import lda
-import lda.datasets
 from sklearn.feature_extraction import DictVectorizer
 from db.DataModel import Course, Lecture, CourseWord, LectureWord, LectureTopic, LectureTopicWord, \
     MaterialTopic, MaterialTopicWord
 from db.DataModel import db, TopicWord, CourseTopic, LDALogLikelihood
 import pathos.multiprocessing as mp
+import copy
 from TopicNameResolver2 import TopicNameResolver2
 
 
@@ -146,14 +146,8 @@ class TopicModeling(object):
                                                       self.n_top_topic, doc_topic_str))
 
         with db.atomic():
-            for idx in range(0, len(topic_word_rows), 500):
-                MaterialTopicWord.insert_many(topic_word_rows[idx:(len(topic_word_rows)
-                                                                   if idx+500 > len(topic_word_rows)
-                                                                   else idx+500)]).execute()
-            for idx in range(0, len(lecture_topic_rows), 500):
-                MaterialTopic.insert_many(lecture_topic_rows[idx:(len(lecture_topic_rows)
-                                                                  if idx+500 > len(lecture_topic_rows)
-                                                                  else idx+500)]).execute()
+            self.__insert_rows(MaterialTopicWord, topic_word_rows)
+            self.__insert_rows(MaterialTopic, lecture_topic_rows)
 
     def lda_over_courses(self):
         """
@@ -176,22 +170,8 @@ class TopicModeling(object):
                         'loglikelihood': round(x, 2)}
             log_likelihoods.append(row_dict)
 
-        topic_word_rows = []
-        # Iterate over topic word distributions
-        for i, topic_dist in enumerate(model.topic_word_):
-            top_topic_words = np.array(vocab)[self.__max_values(topic_dist, self.n_top_words)]
-            top_word_probs = topic_dist[np.argsort(topic_dist)][:-self.n_top_words - 1:-1]
-
-            for top_word, top_weight in zip(top_topic_words, top_word_probs):
-                row_dict = {'topic': i,
-                            'word': top_word,
-                            'weight': round(top_weight * 100, 2)}
-                topic_word_rows.append(row_dict)
-
-            if self.debug:
-                top_word_str = ", ".join([x.encode('utf-8') + "(" + str(round(y * 100, 2)) + "%)"
-                                         for x, y in zip(top_topic_words, top_word_probs)])
-                print('Topic {}: {}'.format(i, top_word_str))
+        norm_topic_word_rows = self.__resolve_topic_words(self.__normalize(model.topic_word_), vocab, 2)
+        topic_word_rows = self.__resolve_topic_words(model.topic_word_, vocab, 1)
 
         # Document-topic distributions
         doc_topic = model.doc_topic_
@@ -213,18 +193,43 @@ class TopicModeling(object):
                                                       self.n_top_topic, doc_topic_str))
 
         with db.atomic():
-            for idx in range(0, len(log_likelihoods), 500):
-                LDALogLikelihood.insert_many(log_likelihoods[idx:(len(log_likelihoods)
-                                                                  if idx+500 > len(log_likelihoods)
-                                                                  else idx+500)]).execute()
-            for idx in range(0, len(topic_word_rows), 500):
-                TopicWord.insert_many(topic_word_rows[idx:(len(topic_word_rows)
-                                                           if idx+500 > len(topic_word_rows)
-                                                           else idx+500)]).execute()
-            for idx in range(0, len(course_topic_rows), 500):
-                CourseTopic.insert_many(course_topic_rows[idx:(len(course_topic_rows)
-                                                               if idx+500 > len(course_topic_rows)
-                                                               else idx+500)]).execute()
+            self.__insert_rows(LDALogLikelihood, log_likelihoods)
+            self.__insert_rows(TopicWord, norm_topic_word_rows)
+            self.__insert_rows(TopicWord, topic_word_rows)
+            self.__insert_rows(CourseTopic, course_topic_rows)
+
+    @staticmethod
+    def __insert_rows(table, rows):
+        for idx in range(0, len(rows), 500):
+            table.insert_many(rows[idx:(len(rows) if idx+500 > len(rows) else idx+500)]).execute()
+
+    @staticmethod
+    def __normalize(topics):
+        new = copy.deepcopy(topics)
+        shp = new.shape
+        v_sums = np.sum(new, axis=0) / shp[0]
+        new = new / v_sums
+        return new
+
+    def __resolve_topic_words(self, topics, voc, order_type):
+        topic_word_rows = []
+        # Iterate over topic word distributions
+        for i, topic_dist in enumerate(topics):
+            top_topic_words = np.array(voc)[self.__max_values(topic_dist, self.n_top_words)]
+            top_word_probs = topic_dist[np.argsort(topic_dist)][:-self.n_top_words - 1:-1]
+
+            for top_word, top_weight in zip(top_topic_words, top_word_probs):
+                row_dict = {'topic': i,
+                            'word': top_word,
+                            'weight': round(top_weight * 100, 2),
+                            'type': order_type}
+                topic_word_rows.append(row_dict)
+
+            if self.debug:
+                top_word_str = ", ".join([x.encode('utf-8') + "(" + str(round(y * 100, 2)) + "%)"
+                                         for x, y in zip(top_topic_words, top_word_probs)])
+                print('Topic {}: {}'.format(i, top_word_str))
+        return topic_word_rows
 
     @staticmethod
     def __max_values(arr, top):
@@ -289,4 +294,3 @@ if __name__ == '__main__':
 
     #Resolve topic names where possible
     TopicNameResolver2().name_topics()
-

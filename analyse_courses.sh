@@ -23,7 +23,7 @@ function usage {
 	echo "	-t, --teachers			scrape teacher names to exclude them from analysis"
 	echo "	-sis, --studyinfosystem			extract study information system data from .csv file"
 	echo "	-tdir, --targetdirectory			directory where the resulting DB file will be copied"
-	echo "	-fc, --fullclean			remove all existing data and db entries, re-download everything instead of just updating the missing parts"
+	echo "	-fc, --fullclean			remove all existing data including corresponding DB entries. Re-download everything instead of just updating the missing parts"
 	echo "	-h, --help 			display help"
 }
 
