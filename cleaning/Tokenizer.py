@@ -83,8 +83,10 @@ class Tokenizer(object):
                 if definition:
                     potential_acronyms.add(acronym)
                     acronym_def[acronym] = definition
+                    lem_word = acronym
                 elif acronym:
                     potential_acronyms.add(acronym)
+                    lem_word = acronym
                 else:  # Don't lemmatize acronyms
                     try:
                         if est_text:
@@ -100,7 +102,7 @@ class Tokenizer(object):
                     continue
 
                 if lem_word not in self.sw.lang_words:
-                    clean_sentence.append(lem_word)
+                    clean_sentence.append(lem_word.lower() if acronym else lem_word)
                     if self.debug:
                         print "{}: {}".format(token.encode('utf-8'), lem_word.encode('utf-8'))
                     if lem_word in token_dict:
@@ -143,12 +145,10 @@ class Tokenizer(object):
     def __resolve_potential_acronym(sentence, token_idx):
         w = sentence[token_idx]
 
-        if len(w) > 4 or not (w.isupper() or (w[0].islower() and w[1:].isupper())
-                              or (w[-1:].islower() and w[:-1].isupper())):
+        if len(w) > 4 or not (w.isupper() or (w[0].islower() and w[1:].isupper())):
             return None, None
 
         #Not the first or the final word
-        w = w.lower()
         sent_len = len(sentence)
         if sent_len == token_idx + 1:
             return w, None
@@ -158,14 +158,14 @@ class Tokenizer(object):
         right_idx = token_idx + len(w) + 2
         if next_w == '(' and sent_len > right_idx and sentence[right_idx] == ')':  # Definition is in parenthesis
             definition = sentence[token_idx+2:right_idx]
-            if all([True if definition[i][0].lower() == w[i] else False for i in range(len(definition))]):
+            if all([True if definition[i][0].lower() == w[i].lower() else False for i in range(len(definition))]):
                 return w, ' '.join(definition).lower()
 
         # Check if acronym is in parenthesis
         left_idx = token_idx - (len(w)+1)
         if next == ')' and left_idx >= 0 and sentence[token_idx-1] == '(':
             definition = sentence[left_idx:token_idx-1]
-            if all([True if definition[i][0].lower() == w[i] else False for i in range(len(definition))]):
+            if all([True if definition[i][0].lower() == w[i].lower() else False for i in range(len(definition))]):
                 return w, ' '.join(definition).lower()
         return w, None
 
@@ -250,6 +250,9 @@ class Tokenizer(object):
                 elif acronym in self.acronyms:  # Present in global acronym definition
                     del word_dict[acronym]
                     word_dict[self.acronyms[acronym]] = count
+                else:  # Could not find definition for potential acronym, lower case and keep the word as it is
+                    del word_dict[acronym]
+                    word_dict[acronym.lower()] = count
 
         return res[0], word_dict, res[2]  # lecture, dictionary, clean sentences
 
