@@ -232,7 +232,7 @@ class Tokenizer(object):
         for a, b, c, d, e in res:
             for k, v in e.iteritems():
                 if k in self.acronyms and self.acronyms[k] != v:
-                    self.acronyms[k] = k  # Conflict, don't change the acronym, use local dictionary instead
+                    self.acronyms[k] = k.lower()  # Conflict, don't change the acronym, use local dictionary instead
                 else:
                     self.acronyms[k] = v
         print "Acronyms:", self.acronyms, "; total count:", len(self.acronyms)  # Global acronyms
