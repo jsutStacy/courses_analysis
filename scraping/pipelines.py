@@ -17,6 +17,12 @@ import datetime
 
 class CoursePipeline(object):
     def process_item(self, item, spider):
+    	print "process course item"
+    	for c in Course.select():
+        	c.delete_instance()
+        	
+        for l in Lecture.select():
+        	l.delete_instance()
         if isinstance(item, CoursesItem):
             course_code = ''.join(item['code'])
             year = item['year']

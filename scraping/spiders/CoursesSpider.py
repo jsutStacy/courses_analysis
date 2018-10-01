@@ -17,20 +17,24 @@ class CoursesSpider(scrapy.Spider):
 
     #Custom params
     allowed_semesters = []
+    course_code = "";
 
-    def __init__(self, semesters='', *args, **kwargs):
+    def __init__(self, semesters='', course_code='', *args, **kwargs):
         """ Expected format '2016F,2014S' - i.e 2016 fall semester and 2014 spring semester
-            The 'semesters' parameter is passed via -a argument """
-
+            The 'semesters' parameter is passed via -a argument 
+            The 'course_code' parameter is passed via -a argument """
+        
+        	
         super(CoursesSpider, self).__init__(*args, **kwargs)
         cfg = Config()
         course_info = cfg.get_courses_info()
         self.allowed_domains = course_info.get("allowed_domains")
         self.start_urls = course_info.get("start_urls")
+        self.course_code = course_code
 
         # Commandline parameters override file parameters
         if semesters:
-            self.allowed_semesters = parse_semesters(semesters)
+        	self.allowed_semesters = parse_semesters(semesters)
         else:
             self.allowed_semesters = cfg.get_allowed_semesters()
 
@@ -50,20 +54,46 @@ class CoursesSpider(scrapy.Spider):
                         yield request
 
     def parse_courses(self, response):
-        for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
-            item = CoursesItem()
-            item["title"] = sel.xpath("a/text()").extract()
-            item["link"] = sel.xpath("a/@href").extract()
-            item["code"] = sel.xpath(".//span/text()").extract()
-            item["year"] = response.meta['year']
-            item["semester"] = response.meta['semester']
-            yield item
-            request = scrapy.Request(response.meta['filter'] + ''.join(item['link']), callback=self.parse_navbar)
-            request.meta['course'] = item
-            request.meta['year'] = response.meta['year']
-            request.meta['semester'] = response.meta['semester']
-            request.meta['filter'] = response.meta['filter']
-            yield request
+    	print "parse_courses: {}".format(self.course_code)
+    	if self.course_code != "":
+    		for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
+    			code = sel.xpath(".//span/text()").extract()[0]
+    			item = CoursesItem()
+        		if (self.course_code == code):
+        			print "FOUNDOCURSE: {}".format(self.course_code)
+            		title = sel.xpath("a/text()").extract()[0]
+            		item["title"] = title
+            		item["link"] = ''.join(sel.xpath("a/@href").extract())
+            		item["code"] = code
+            		item["year"] = response.meta['year']
+            		item["semester"] = response.meta['semester']
+            		yield item
+            		request = scrapy.Request(response.meta['filter'] + ''.join(item['link']), callback=self.parse_navbar)
+            		request.meta['course'] = item
+            		request.meta['year'] = response.meta['year']
+            		request.meta['semester'] = response.meta['semester']
+            		request.meta['filter'] = response.meta['filter']
+            		yield request
+    	else:
+    		print "course_code not provided: {}".format(self.course_code)
+        	for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
+        		item = CoursesItem()
+            	title = sel.xpath("a/text()").extract()[0]
+            	item["title"] = title
+            	item["link"] = ''.join(sel.xpath("a/@href").extract())
+            	item["code"] = ''.join(sel.xpath(".//span/text()").extract())
+            	item["year"] = response.meta['year']
+            	item["semester"] = response.meta['semester']
+            	yield item
+            	request = scrapy.Request(response.meta['filter'] + ''.join(item['link']), callback=self.parse_navbar)
+            	request.meta['course'] = item
+            	request.meta['year'] = response.meta['year']
+            	request.meta['semester'] = response.meta['semester']
+            	request.meta['filter'] = response.meta['filter']
+            	yield request
+        	
+        	
+        
 
     def parse_navbar(self, response):
         for sel in response.xpath("//nav[@class=\"sidebar\"]").xpath(".//a"):

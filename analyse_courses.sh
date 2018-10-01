@@ -25,9 +25,11 @@ function usage {
 	echo "	-tdir, --targetdirectory			directory where the resulting DB file will be copied"
 	echo "	-fc, --fullclean			remove all existing data including corresponding DB entries. Re-download everything instead of just updating the missing parts"
 	echo "	-h, --help 			display help"
+	echo "	-cc, --course_code				course code that need to be processed
 }
 
 SEMESTERS=
+COURSE_CODE=
 MOODLE=
 SIS=
 TEACHERS=
@@ -38,6 +40,8 @@ while [ "$1" != "" ]; do
         -s | --semesters )      shift
                                 SEMESTERS=$1
                                 ;;
+        -cc | --course_code			shift
+        						COURSE_CODE=$1
 		-tdir | --targetdirectory )	     shift
 								TARGET_DIR=$1
 								;;

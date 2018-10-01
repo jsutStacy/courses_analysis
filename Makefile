@@ -21,6 +21,9 @@ endif
 
 scrape-courses:
 	scrapy crawl courses -a semesters=$(SEMESTERS)
+
+scrape-course:
+	scrapy crawl courses -a semesters=$(SEMESTERS) -a course_code=$(COURSE_CODE)
 	
 scrape-moodle:
 	scrapy crawl moodle
