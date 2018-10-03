@@ -18,11 +18,14 @@ def __remove_duplicates():
     (preferably the .pdf one, since extracting text from pdf is more
     prone to errors).
     """
+    print "removing duplicates: {}".format(len(Course.select()))
     lectures_to_delete = []
-
     for course in Course.select():
+    	print "course: {}".format(course.code)
         lectures = {}
+        print "Lectures: {}".format(len(Lecture.select().where(Lecture.course == course)))
         for lecture in Lecture.select().where(Lecture.course == course):
+        	print "Lecture: {}".format(lecture.name)
             extension = __resolve_extension(lecture.name)
             if not extension:
                 continue

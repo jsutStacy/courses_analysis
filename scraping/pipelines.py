@@ -18,11 +18,6 @@ import datetime
 class CoursePipeline(object):
     def process_item(self, item, spider):
     	print "process course item"
-    	for c in Course.select():
-        	c.delete_instance()
-        	
-        for l in Lecture.select():
-        	l.delete_instance()
         if isinstance(item, CoursesItem):
             course_code = ''.join(item['code'])
             year = item['year']
@@ -32,7 +27,7 @@ class CoursePipeline(object):
             course = Course.select().where(Course.code == course_code, Course.year == year, Course.semester == semester)
 
             if not course.exists():
-                print "course record not found, creating"
+                print "course record not found, creating: {}".format(course_code)
                 with db.atomic():
                     try:
                         Course.create(
@@ -100,7 +95,7 @@ class DataPipeline(object):
                 with db.atomic():
                     try:
                         Lecture.create(
-                            course=course,
+                            course=course[0],
                             url=url,
                             path=path,
                             name=title,

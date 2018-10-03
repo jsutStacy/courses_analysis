@@ -59,21 +59,27 @@ class CoursesSpider(scrapy.Spider):
     		for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
     			code = sel.xpath(".//span/text()").extract()[0]
     			item = CoursesItem()
+    			print "course_code {}".format(self.course_code)
+    			print "code {}".format(code)
+    			print "self.course_code == code {}".format(self.course_code == code)
         		if (self.course_code == code):
-        			print "FOUNDOCURSE: {}".format(self.course_code)
-            		title = sel.xpath("a/text()").extract()[0]
-            		item["title"] = title
-            		item["link"] = ''.join(sel.xpath("a/@href").extract())
-            		item["code"] = code
-            		item["year"] = response.meta['year']
-            		item["semester"] = response.meta['semester']
-            		yield item
-            		request = scrapy.Request(response.meta['filter'] + ''.join(item['link']), callback=self.parse_navbar)
-            		request.meta['course'] = item
-            		request.meta['year'] = response.meta['year']
-            		request.meta['semester'] = response.meta['semester']
-            		request.meta['filter'] = response.meta['filter']
-            		yield request
+            		 title = sel.xpath("a/text()").extract()[0]
+            		 item["title"] = title
+            		 item["link"] = ''.join(sel.xpath("a/@href").extract())
+            		 item["code"] = code
+            		 item["year"] = response.meta['year']
+            		 item["semester"] = response.meta['semester']
+            		 print "yield item: {}".format(item["code"])
+            		 yield item
+            		 request = scrapy.Request(response.meta['filter'] + ''.join(item['link']), callback=self.parse_navbar)
+            		 request.meta['course'] = item
+            		 request.meta['year'] = response.meta['year']
+            		 request.meta['semester'] = response.meta['semester']
+            		 request.meta['filter'] = response.meta['filter']
+            		 print "yeld requets"
+            		 yield request
+            	else:
+            		print "not found"
     	else:
     		print "course_code not provided: {}".format(self.course_code)
         	for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
