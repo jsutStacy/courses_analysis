@@ -25,7 +25,6 @@ def __remove_duplicates():
         lectures = {}
         print "Lectures: {}".format(len(Lecture.select().where(Lecture.course == course)))
         for lecture in Lecture.select().where(Lecture.course == course):
-        	print "Lecture: {}".format(lecture.name)
             extension = __resolve_extension(lecture.name)
             if not extension:
                 continue
