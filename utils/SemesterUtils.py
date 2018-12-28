@@ -9,6 +9,7 @@ def determine_semester():
 
 
 def parse_semesters(semesters_str):
+    print "semesters_str: {}".format(semesters_str)
     semesters = set()
     for sem in semesters_str.split(","):
         if len(sem) != 5:

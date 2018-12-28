@@ -21,7 +21,7 @@ def __remove_duplicates():
     print "removing duplicates: {}".format(len(Course.select()))
     lectures_to_delete = []
     for course in Course.select():
-    	print "course: {}".format(course.code)
+    	print "Course: {}".format(course.code)
         lectures = {}
         print "Lectures: {}".format(len(Lecture.select().where(Lecture.course == course)))
         for lecture in Lecture.select().where(Lecture.course == course):

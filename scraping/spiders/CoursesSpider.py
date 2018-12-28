@@ -54,7 +54,7 @@ class CoursesSpider(scrapy.Spider):
                         yield request
 
     def parse_courses(self, response):
-    	print "parse_courses: {}".format(self.course_code)
+    	print "parse_courses: {}".format(response.xpath("//ul[@class=\"course-list\"]"))
     	if self.course_code != "":
     		for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
     			code = sel.xpath(".//span/text()").extract()[0]
@@ -76,18 +76,18 @@ class CoursesSpider(scrapy.Spider):
             		 request.meta['year'] = response.meta['year']
             		 request.meta['semester'] = response.meta['semester']
             		 request.meta['filter'] = response.meta['filter']
-            		 print "yeld requets"
             		 yield request
             	else:
             		print "not found"
     	else:
-    		print "course_code not provided: {}".format(self.course_code)
         	for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
         		item = CoursesItem()
             	title = sel.xpath("a/text()").extract()[0]
             	item["title"] = title
             	item["link"] = ''.join(sel.xpath("a/@href").extract())
             	item["code"] = ''.join(sel.xpath(".//span/text()").extract())
+                print "sel {}".format(sel)
+                print "CODECODECODE {}".format(''.join(sel.xpath(".//span/text()").extract()))
             	item["year"] = response.meta['year']
             	item["semester"] = response.meta['semester']
             	yield item

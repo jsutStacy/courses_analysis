@@ -34,7 +34,7 @@ class Tokenizer(object):
 
 	
 	def __extract_lecture_tokens(self, lecture):
-		print "Course {} Lecture: {}".format(lecture.course.id, lecture.id)
+		print "Course {} Lecture: {}".format(lecture.course.code, lecture.id)
 		text = lecture.content
 		try:
 			sentences = self.tokenize_sent(text)  # Split raw text to sentences
@@ -212,6 +212,30 @@ class Tokenizer(object):
 		print "Co-occurring words:", self.co_occurring_words, "; total count:", len(self.co_occurring_words)
 		# Re-count co-occurring words and remove 'standalone' words
 		return self.pool.map(self.__adjust_lecture_counts, result_data)
+
+	def extract_all_lectures_tokens_per_course(self):
+		# Tokenize and clean each lecture separately
+		result_data = {}
+
+		for course in Course.select():
+			tokens = self.extract_all_lectures_tokens_per_course_helper(course.id)
+			res_data[course.code] = tokens
+		return result_data
+
+	def extract_all_lectures_tokens_per_course_helper(self, course_id):
+		# Tokenize and clean each lecture separately
+		result_data = [x for x in (self.pool.map(self.__extract_lecture_tokens, Lecture.select().where(Lecture.course == course_id))) if x]
+
+		#Create acronym dictionary and replace acronyms with definitions
+		self.__create_acronym_dict(result_data)
+		result_data = self.pool.map(self.__replace_acronyms, result_data)
+
+		# Perform co-occurrence over entire word corpus, filter by course code limit
+		docs = [(y[0].course.code, y[2]) for y in result_data]
+		self.co_occurring_words = self.co_occ.find_co_occurring_words(docs, self.acronyms)
+		print "Co-occurring words:", self.co_occurring_words, "; total count:", len(self.co_occurring_words)
+		# Re-count co-occurring words and remove 'standalone' words
+		return self.pool.map(self.__adjust_lecture_counts, result_data)
 	
 	def persist_lecture_dict(self, lecture_data, rem_words):
 		initial = lecture_data
@@ -328,6 +352,23 @@ class Tokenizer(object):
 				course_dicts[course_id] = [lecture.course, copy.deepcopy(lec_dict)]
 		return course_dicts
 
+	@staticmethod
+	def create_all_course_tokens_with_codes(lecture_data):
+		course_dicts = {}
+		for lecture, lec_dict in lecture_data:
+			course_id = lecture.course.id
+			course_code = lecture.course.code
+			if course_id in course_dicts:
+				info = course_dicts[course_id]
+				for k, v in lec_dict.items():
+					if k in info[1]:
+						info[1][k] += lec_dict[k]  # word count
+					else:
+						info[1][k] = lec_dict[k]
+			else:
+				course_dicts['###' + course_code] = [copy.deepcopy(lec_dict)]
+		return course_dicts
+
 	def persist_course_dict(self, courses_data, rem_words):
 		for w in rem_words:
 			for course_id, course_info in courses_data.items():
@@ -422,14 +463,18 @@ if __name__ == '__main__':
 
 	print "Extracting all lecture tokens"
 	lec_data = measure_time(tok.extract_all_lectures_tokens, "Extracted lecture tokens")
-	
+
 	print "Creating course tokens"
 	course_data = measure_time(tok.create_all_course_tokens, "Created course tokens", lec_data)
+	
+	print "Creating course tokens"
+	course_data_tokens = measure_time(tok.create_all_course_tokens_with_codes, "Created course tokens", lec_data)
 
 	print "Creating corpus tokens"
 	removable = measure_time(tok.create_corpus_tokens, "Created corpus tokens", course_data)
 
 	print "lect_data {}".format(lec_data)
+	print "course_data_tokens {}".format(course_data_tokens)
 
 	# Remove infrequent words and persist lecture and course words
 	#result  = tok.persist_lecture_dict(lec_data, removable)
