@@ -54,14 +54,11 @@ class CoursesSpider(scrapy.Spider):
                         yield request
 
     def parse_courses(self, response):
-    	print "parse_courses: {}".format(response.xpath("//ul[@class=\"course-list\"]"))
+        print "parse_courses: {}".format(response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"))
     	if self.course_code != "":
     		for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
     			code = sel.xpath(".//span/text()").extract()[0]
     			item = CoursesItem()
-    			print "course_code {}".format(self.course_code)
-    			print "code {}".format(code)
-    			print "self.course_code == code {}".format(self.course_code == code)
         		if (self.course_code == code):
             		 title = sel.xpath("a/text()").extract()[0]
             		 item["title"] = title
@@ -69,7 +66,6 @@ class CoursesSpider(scrapy.Spider):
             		 item["code"] = code
             		 item["year"] = response.meta['year']
             		 item["semester"] = response.meta['semester']
-            		 print "yield item: {}".format(item["code"])
             		 yield item
             		 request = scrapy.Request(response.meta['filter'] + ''.join(item['link']), callback=self.parse_navbar)
             		 request.meta['course'] = item
@@ -80,13 +76,14 @@ class CoursesSpider(scrapy.Spider):
             	else:
             		print "not found"
     	else:
-        	for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
-        		item = CoursesItem()
-            	title = sel.xpath("a/text()").extract()[0]
+            print "parse_courses without course code: {}".format(response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"))
+            for sel in response.xpath("//ul[@class=\"course-list\"]").xpath(".//li"):
+                print "sel {}".format(sel)
+                item = CoursesItem()
+                title = sel.xpath("a/text()").extract()[0]
             	item["title"] = title
             	item["link"] = ''.join(sel.xpath("a/@href").extract())
             	item["code"] = ''.join(sel.xpath(".//span/text()").extract())
-                print "sel {}".format(sel)
                 print "CODECODECODE {}".format(''.join(sel.xpath(".//span/text()").extract()))
             	item["year"] = response.meta['year']
             	item["semester"] = response.meta['semester']
