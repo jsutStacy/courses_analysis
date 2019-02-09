@@ -49,6 +49,7 @@ class Tokenizer(object):
 		clean_sentences = []  # Keep track of sentences once they have been cleaned for co-occurrence
 		potential_acronyms = set()  # Words that could potentially be acronyms
 		acronym_def = {}  # Words that are definitely acronyms, process as definitions
+		print "sentences: {}".format(len(sentences))
 		for sentence in sentences:
 			if est_text:  # In case of estonian text, lemmatize sentence immediately to take advantage of disambiguation
 				est_processed_text = self.est_analyser(sentence.replace(chr(0), ''))  # VabaMorf will fail on ord(0)
@@ -113,6 +114,7 @@ class Tokenizer(object):
 				clean_sentence.append('')  # Empty string, so that sentence would end with a space
 				clean_sentences.append(' '.join(clean_sentence))
 
+		print "done with that"
 		return lecture, token_dict, clean_sentences, potential_acronyms, acronym_def
 	
 	def __is_latin(self, uchr):
@@ -199,8 +201,19 @@ class Tokenizer(object):
 		return list(courses)
 	
 	def extract_all_lectures_tokens(self):
+		print "extract_all_lectures_tokens"
+		print "lectures total: {}".format(len(Lecture.select()))
 		# Tokenize and clean each lecture separately
-		result_data = [x for x in (self.pool.map(self.__extract_lecture_tokens, Lecture.select())) if x]
+		# result_data = [x for x in (self.pool.map(self.__extract_lecture_tokens, Lecture.select())) if x]
+		result_data = []
+		i = 1
+		for x in Lecture.select().order_by(Lecture.id):
+			y = self.__extract_lecture_tokens(x)
+			if y:
+				print "index: {}".format(i)
+				result_data.append(y)
+				i += 1
+		print "result_data {}".format(result_data)
 
 		#Create acronym dictionary and replace acronyms with definitions
 		self.__create_acronym_dict(result_data)
@@ -211,6 +224,7 @@ class Tokenizer(object):
 		self.co_occurring_words = self.co_occ.find_co_occurring_words(docs, self.acronyms)
 		print "Co-occurring words:", self.co_occurring_words, "; total count:", len(self.co_occurring_words)
 		# Re-count co-occurring words and remove 'standalone' words
+		print "done"
 		return self.pool.map(self.__adjust_lecture_counts, result_data)
 
 	def extract_all_lectures_tokens_per_course(self):

@@ -32,6 +32,25 @@ class Lecture(BaseModel):
 main_tables = [Course, Lecture]
 db.create_tables(main_tables)
 
+prefix = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/'
+
+lectures = Lecture.select().where(Lecture.time.is_null(True))
+print "lectures: {}".format(len(lectures))
+for lec in lectures:
+    path = prefix + lec.path
+    if lec.path and os.path.exists(path):
+        os.remove(path)
+
+courses = Course.select()
+print "courses: {}".format(len(courses))
+with db.atomic():
+    for lec in lectures:
+        lec.delete_instance()
+    for course in courses:
+        course.delete_instance(recursive=True)
+
+
+
 print "Courses: {}".format(len(Course.select()))
 for c in Course.select():
     c.delete_instance()
